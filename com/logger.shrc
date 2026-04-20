@@ -23,16 +23,17 @@
 # ログレベルの優先度定義
 # ------------------------------------------------------------
 declare -A LOG_LEVEL_PRIORITY=(
-    ['DEBUG']='0' 
-    ['INFO']='1' 
-    ['WARNING']='2' 
-    ['ERROR']='3' 
-  )
-
+    ['DEBUG']='0'
+    ['INFO']='1'
+    ['WARN']='2'
+    ['WARNING']='2'
+    ['ERROR']='3'
+    ['FATAL']='4'
+)  
 # ------------------------------------------------------------
 # グローバル変数
 # ------------------------------------------------------------
-DEFAULT_LOG_MODE="CONSOLE"  # ログの出力モード (FILE, CONSOLE, SYSLOG)
+DEFAULT_LOG_MODE="CONSOLE"  # ログの出力モード (FILE, CONSOLE9, SYSLOG)
 
 BASE_PATH=${BASE_PATH:-"//home/bepro/projects/scripts/"}
 BIN_PATH=${BASE_PATH}/bin
