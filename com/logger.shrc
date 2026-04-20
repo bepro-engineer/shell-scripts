@@ -18,7 +18,8 @@
 # 1.0  PR-0001    2025/01/16 Bepro       新規作成
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 # 共通クラスの読み込み
-. $(dirname $0)/../com/utils.shrc
+# shellcheck disable=SC1091
+. "$(dirname "${BASH_SOURCE[0]}")/../com/utils.shrc"
 # ------------------------------------------------------------
 # ログレベルの優先度定義
 # ------------------------------------------------------------
@@ -36,17 +37,24 @@ declare -A LOG_LEVEL_PRIORITY=(
 DEFAULT_LOG_MODE="CONSOLE"  # ログの出力モード (FILE, CONSOLE9, SYSLOG)
 
 BASE_PATH=${BASE_PATH:-"//home/bepro/projects/scripts/"}
+# shellcheck disable=SC2034
 BIN_PATH=${BASE_PATH}/bin
+# shellcheck disable=SC2034
 COM_PATH=${BASE_PATH}/com
+# shellcheck disable=SC2034
 ETC_PATH=${BASE_PATH}/etc
+# shellcheck disable=SC2034
 LOG_PATH=${BASE_PATH}/log
+# shellcheck disable=SC2034
 TMP_PATH=${BASE_PATH}/tmp
+# shellcheck disable=SC2034
 REP_PATH=${BASE_PATH}/rep
 SCRIPT_NAME=$(basename "$0")
 INFRA_MSG_CONF="${ETC_PATH}/infraMessage.cfg"
 LOG_FORMAT="%s [ %s ] [ %s ] %s"  # デフォルトのログフォーマット
 LOG_LEVEL=${LOG_LEVEL:-"DEBUG"}  # デフォルトのログレベル
 TIMER_START=0
+# shellcheck disable=SC2034
 JOB_OK=0
 JOB_WR=1
 JOB_ER=2
@@ -143,8 +151,12 @@ startTimer() {
 
 # タイマー終了と実行時間出力
 endTimer() {
-  local end_time=$(date +%s)
-  local elapsed=$((end_time - TIMER_START))
+  local end_time
+  local elapsed
+
+  end_time=$(date +%s)
+  elapsed=$((end_time - TIMER_START))
+
   logOut "INFO" "Execution time: ${elapsed} seconds."
 }
 
@@ -153,19 +165,29 @@ parseArgs() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --log-level)
+        if [[ -z "$2" ]]; then
+          echo "Missing value for --log-level" >&2
+          return 1
+        fi
         LOG_LEVEL="$2"
         shift 2
         ;;
       --log-mode)
+        if [[ -z "$2" ]]; then
+          echo "Missing value for --log-mode" >&2
+          return 1
+        fi
         DEFAULT_LOG_MODE="$2"
         shift 2
         ;;
       *)
-        echo "Unknown argument: $1"
-        exit 1
+        echo "Unknown argument: $1" >&2
+        return 1
         ;;
     esac
   done
+
+  return 0
 }
 
 # --------------------------------------------------
@@ -176,15 +198,18 @@ parseArgs() {
 # return  N/A
 # --------------------------------------------------
 cnvServerityToLevel() {
-  local level=$(lower "${1##*.}")
-  local msg=$(eval echo "$2")
+  local level
+  local msg
+
+  level=$(lower "${1##*.}")
+  msg=$(eval echo "$2")
 
   case "$level" in
     emerg|panic|crit|error|err ) logOut "ERROR" "$msg" ;;
     alert|warn|notice )          logOut "WARN"  "$msg" ;;
     info )                       logOut "INFO"  "$msg" ;;
     debug )                      logOut "DEBUG" "$msg" ;;
-    trace|* )                    logOut "ERROR" "$msg" ;;  # 未定義レベルは ERROR 扱い
+    trace|* )                    logOut "ERROR" "$msg" ;;
   esac
 }
 
