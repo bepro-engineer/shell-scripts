@@ -348,7 +348,8 @@ getProcessCount() {
 #   - Does not rely on external tools other than `sed` for matching.
 # --------------------------------------------------
 isAlphaNum() {
-  val="$(echo $1 | sed -e 's/[^[:alnum:]]//g')"
+  local val
+  val="$(echo "$1" | sed -e 's/[^[:alnum:]]//g')"
 
   if [ "$val" != "$1" ]; then
     return 1  # Not Alphanumeric
