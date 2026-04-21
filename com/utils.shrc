@@ -515,7 +515,7 @@ checkProcessCount() {
 #   Current date (printed to stdout).
 # ------------------------------------------------------------
 getCurrentDate() {
-    echo "$(date +"%Y-%m-%d" | tr -d '\r')"
+    date +"%Y-%m-%d" | tr -d '\r'
 }
 
 # ------------------------------------------------------------
