@@ -140,8 +140,8 @@ getMsg() {
     return ${JOB_WR}
   fi
 
-  # 二重展開を実施
-  eval "echo \"${message}\""
+  # 変数を二重展開してメッセージを返却
+  eval "printf '%s\n' \"${message}\""
 }
 
 # タイマー開始
