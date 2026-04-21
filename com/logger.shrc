@@ -70,8 +70,8 @@ scope="func"
 # 区切り線の表示
 divider() {
   local message="$1"
-  echo -e "\n    ------------"
-  echo -e "    ▼ ${message}"
+  printf '\n    ------------\n'
+  printf '    ▼ %s\n' "$message"
 }
 
 # ログ開始処理
