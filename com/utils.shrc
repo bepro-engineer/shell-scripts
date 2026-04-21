@@ -96,13 +96,15 @@ acquireLock() {
 #   - Ensure the specified locale is installed on the system.
 # --------------------------------------------------
 setUTF8() {
+  local lang_value
+
   case $(uname -s) in
-    AIX)           LANG=JA_JP ;;
-    Linux|FreeBSD) LANG=ja_JP.UTF-8 ;;
-    *)             LANG=C ;;
+    AIX)           lang_value="JA_JP" ;;
+    Linux|FreeBSD) lang_value="ja_JP.UTF-8" ;;
+    *)             lang_value="C" ;;
   esac
-  export LANG
-  logOut "INFO" "LANG set to ${LANG} based on operating system."
+
+  setLANG "$lang_value"
 }
 
 # --------------------------------------------------
@@ -123,36 +125,33 @@ setUTF8() {
 #   - For unsupported OS: LANG defaults to "C"
 # --------------------------------------------------
 setSJIS() {
+  local lang_value
+
   case $(uname -s) in
-    AIX)     LANG=Ja_JP ;;
-    Linux)   LANG=ja_JP.sjis ;;
-    FreeBSD) LANG=ja_JP.SJIS ;;
-    *)       LANG=C ;;
+    AIX)     lang_value="Ja_JP" ;;
+    Linux)   lang_value="ja_JP.sjis" ;;
+    FreeBSD) lang_value="ja_JP.SJIS" ;;
+    *)       lang_value="C" ;;
   esac
-  export LANG
-  logOut "INFO" "LANG set to ${LANG} based on operating system."
+
+  setLANG "$lang_value"
 }
 
 # --------------------------------------------------
 # Set LANG
 # --------------------------------------------------
 # Purpose:
-#   Sets the language environment variable (LANG).
+#   Sets the LANG environment variable to the specified value.
 # Arguments:
-#   $1: The LANG value (default: C)
+#   $1: LANG value to set (default: C)
 # Returns:
 #   None
 # Notes:
-#   - Supports UTF-8, Shift-JIS, and C/POSIX locales.
-#   - Logs the LANG setting for debugging.
+#   - If no value is specified, LANG defaults to "C".
+#   - Logs the LANG setting.
 # --------------------------------------------------
 setLANG() {
-  case "$1" in
-    UTF-8|utf-8|UTF8|utf8|UTF) LANG="en_US.UTF-8" ;;
-    SJIS|sjis|Shift-JIS) LANG="ja_JP.SJIS" ;;
-    C|POSIX) LANG="C" ;;
-    *) LANG="C" ;;
-  esac
+  LANG="${1:-C}"
   export LANG
   logOut "INFO" "LANG has been set to [$LANG]"
 }
