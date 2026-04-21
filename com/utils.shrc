@@ -597,10 +597,15 @@ deleteOldFiles() {
 
   if [ ! -d "$dir" ]; then
     logOut "ERROR" "Directory not found: $dir"
-    return 1
+    return 2
   fi
 
-  find "$dir" -type f -mtime +"$days" -exec rm -f {} \; && logOut "INFO" "Old files in $dir older than $days days deleted." || logOut "ERROR" "Failed to delete files in $dir."
+  if find "$dir" -type f -mtime +"$days" -exec rm -f {} \;; then
+    logOut "INFO" "Old files in $dir older than $days days deleted."
+  else
+    logOut "ERROR" "Failed to delete files in $dir."
+    return 2
+  fi
 }
 
 # ------------------------------------------------------------
