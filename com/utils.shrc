@@ -406,12 +406,19 @@ isPortAlive() {
   # Validate input
   if [[ -z "$port" || ! "$port" =~ ^[0-9]+$ ]]; then
     logOut "ERROR" "Invalid port number: $port"
-    return 1
+    return 2
   fi
 
   # Check if the port is in LISTEN state
   local count
-  count=$(netstat -tan 2>/dev/null | grep ":$port" | grep -w "LISTEN" | wc -l)
+  if command -v ss > /dev/null 2>&1; then
+    count=$(ss -tan 2>/dev/null | grep ":$port" | grep -w "LISTEN" | wc -l)
+  elif command -v netstat > /dev/null 2>&1; then
+    count=$(netstat -tan 2>/dev/null | grep ":$port" | grep -w "LISTEN" | wc -l)
+  else
+    logOut "ERROR" "Neither ss nor netstat is available."
+    return 2
+  fi
 
   if [ "$count" -eq 0 ]; then
     return 1  # Port is not listening
