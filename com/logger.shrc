@@ -89,7 +89,7 @@ exitLog() {
 
   case "${rc}" in
     0) status="INFO" ;;
-    1) status="WARNING" ;;
+    1) status="WARN" ;;
     2) status="ERROR" ;;
     *) status="FATAL" ;;
   esac
@@ -146,7 +146,7 @@ getMsg() {
   ' "${INFRA_MSG_CONF}")
 
   if [[ -z "${message}" ]]; then
-    logOut "WARNING" "Message ID not found: ${msg_id}"
+    logOut "WARN" "Message ID not found: ${msg_id}"
     return ${JOB_WR}
   fi
 
@@ -175,7 +175,7 @@ parseArgs() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --log-level)
-        if [[ -z "$2" ]]; then
+        if [[ $# -lt 2 || -z "${2:-}" ]]; then
           echo "Missing value for --log-level" >&2
           return 1
         fi
@@ -183,7 +183,7 @@ parseArgs() {
         shift 2
         ;;
       --log-mode)
-        if [[ -z "$2" ]]; then
+        if [[ $# -lt 2 || -z "${2:-}" ]]; then
           echo "Missing value for --log-mode" >&2
           return 1
         fi
@@ -198,29 +198,6 @@ parseArgs() {
   done
 
   return 0
-}
-
-# --------------------------------------------------
-# Level conversion for outputting the log to the console.
-# --------------------------------------------------
-# param1  facility.serverity
-# param2  messages
-# return  N/A
-# --------------------------------------------------
-cnvServerityToLevel() {
-  local level
-  local msg
-
-  level=$(lower "${1##*.}")
-  msg=$(eval echo "$2")
-
-  case "$level" in
-    emerg|panic|crit|error|err ) logOut "ERROR" "$msg" ;;
-    alert|warn|notice )          logOut "WARN"  "$msg" ;;
-    info )                       logOut "INFO"  "$msg" ;;
-    debug )                      logOut "DEBUG" "$msg" ;;
-    trace|* )                    logOut "ERROR" "$msg" ;;
-  esac
 }
 
 # --------------------------------------------------
@@ -256,6 +233,30 @@ expandMsg() {
 }
 
 # --------------------------------------------------
+# Level conversion for outputting the log to the console.
+# --------------------------------------------------
+# param1  facility.serverity
+# param2  messages
+# return  N/A
+# --------------------------------------------------
+cnvServerityToLevel() {
+  local level
+  local msg
+
+  level=$(lower "${1##*.}")
+  msg=$(expandMsg "$2")
+
+  case "$level" in
+    emerg|panic|fatal )          logOut "FATAL" "$msg" ;;
+    crit|error|err )             logOut "ERROR" "$msg" ;;
+    alert|warn|warning|notice )  logOut "WARN"  "$msg" ;;
+    info )                       logOut "INFO"  "$msg" ;;
+    debug|trace )                logOut "DEBUG" "$msg" ;;
+    * )                          logOut "ERROR" "$msg" ;;
+  esac
+}
+
+# --------------------------------------------------
 # Output the system log.
 # --------------------------------------------------
 # param1  messages id
@@ -270,19 +271,46 @@ logSystem() {
     fac_serv=$(awk -v id="$1" 'NF >= 2 && $1 == id { print $2; exit }' "${INFRA_MSG_CONF}")
 
     if [ -z "$fac_serv" ]; then
-        logOut "WARNING" "Logger priority is missing for id [$1]. Message not sent to syslog."
-        return
+        logOut "WARN" "Logger priority is missing for id [$1]. Message not sent to syslog."
+        return 1
     fi
 
     msg_conf="${INFRA_MSG_CONF}"
     raw_msg=$(getSysMsg "$1" "$fac_serv")
     e_msg=$(expandMsg "$raw_msg")
-    logOut "[DEBUG] fac_serv=[$fac_serv]" >&2
-    logOut "[DEBUG] e_msg=[$e_msg]" >&2
 
-    logger -t "$SCRIPT_NAME" -p "$fac_serv" "$e_msg"
+    logOut "DEBUG" "fac_serv=[$fac_serv]"
+    logOut "DEBUG" "e_msg=[$e_msg]"
+
+    case "${DEFAULT_LOG_MODE}" in
+      "SYSLOG")
+        syslog_facility="${fac_serv%%.*}"
+        syslog_severity="${fac_serv##*.}"
+
+        case "${syslog_severity}" in
+          emerg|panic )   syslog_severity="crit" ;;
+          fatal )         syslog_severity="crit" ;;
+          crit )          syslog_severity="crit" ;;
+          error|err )     syslog_severity="err" ;;
+          alert )         syslog_severity="alert" ;;
+          warn|warning )  syslog_severity="warning" ;;
+          notice )        syslog_severity="notice" ;;
+          info )          syslog_severity="info" ;;
+          debug|trace )   syslog_severity="debug" ;;
+          * )             syslog_severity="err" ;;
+        esac
+
+        logger -t "$SCRIPT_NAME" -p "${syslog_facility}.${syslog_severity}" "$e_msg"
+        ;;
+      "CONSOLE"|"FILE")
+        cnvServerityToLevel "$fac_serv" "$raw_msg"
+        ;;
+      *)
+        logOut "ERROR" "Invalid log mode: ${DEFAULT_LOG_MODE}"
+        return 1
+        ;;
+    esac
 }
-
 # ------------------------------------------------------------
 # 使用例
 # ------------------------------------------------------------
