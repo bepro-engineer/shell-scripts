@@ -560,7 +560,7 @@ backupFile() {
   local file="$1"
   if [ ! -f "$file" ]; then
     logOut "ERROR" "File not found: $file"
-    return 1
+    return 2
   fi
 
   local timestamp
@@ -570,7 +570,12 @@ backupFile() {
   local backup="${file}_${timestamp}.bak"
   
   # バックアップを作成
-  cp "$file" "$backup" && logOut "INFO" "Backup created: $backup" || logOut "ERROR" "Failed to create backup: $file"
+  if cp "$file" "$backup"; then
+    logOut "INFO" "Backup created: $backup"
+  else
+    logOut "ERROR" "Failed to create backup: $file"
+    return 2
+  fi
 }
 
 # ------------------------------------------------------------
