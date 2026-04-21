@@ -477,7 +477,7 @@ checkProcessCount() {
     local process_count
 
     # プロセス数を数値として取得
-    process_count=$(ps aux | grep "$process_name" | grep -v grep | wc -l)
+    process_count=$(ps aux | grep -F "$process_name" | grep -v grep | wc -l)
 
     # プロセス数が空でないことを確認
     if [ -z "$process_count" ] || ! [[ "$process_count" =~ ^[0-9]+$ ]]; then
@@ -495,7 +495,7 @@ checkProcessCount() {
         return 0  # プロセス数は範囲内
     elif [ "$process_count" -lt "$min_count" ]; then
         return 1  # プロセス数が最小値より少ない
-    elif [ "$process_count" -gt "$max_count" ]; then
+    else
         return 2  # プロセス数が最大値を超えている
     fi
 }
