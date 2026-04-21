@@ -179,7 +179,16 @@ parseArgs() {
           echo "Missing value for --log-level" >&2
           return 1
         fi
-        LOG_LEVEL="$2"
+
+        case "$2" in
+          DEBUG|INFO|WARN|ERROR|FATAL)
+            LOG_LEVEL="$2"
+            ;;
+          *)
+            echo "Invalid value for --log-level: $2" >&2
+            return 1
+            ;;
+        esac
         shift 2
         ;;
       --log-mode)
@@ -187,7 +196,16 @@ parseArgs() {
           echo "Missing value for --log-mode" >&2
           return 1
         fi
-        DEFAULT_LOG_MODE="$2"
+
+        case "$2" in
+          CONSOLE|FILE|SYSLOG)
+            DEFAULT_LOG_MODE="$2"
+            ;;
+          *)
+            echo "Invalid value for --log-mode: $2" >&2
+            return 1
+            ;;
+        esac
         shift 2
         ;;
       *)
