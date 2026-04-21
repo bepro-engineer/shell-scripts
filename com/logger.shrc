@@ -256,7 +256,7 @@ logSystem() {
     fi
 
     raw_msg=$(getSysMsg "$1" "$fac_serv")
-    e_msg=$(eval "echo \"$raw_msg\"")
+    e_msg=$(eval "printf '%s\n' \"$raw_msg\"")
 
     logOut "[DEBUG] fac_serv=[$fac_serv]" >&2
     logOut "[DEBUG] e_msg=[$e_msg]" >&2
