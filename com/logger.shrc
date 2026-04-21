@@ -50,7 +50,7 @@ TMP_PATH=${BASE_PATH}/tmp
 # shellcheck disable=SC2034
 REP_PATH=${BASE_PATH}/rep
 SCRIPT_NAME=$(basename "$0")
-INFRA_MSG_CONF="${ETC_PATH}/infraMessage.cfg"
+INFRA_MSG_CONF="${ETC_PATH}/infraMessage.conf"
 LOG_FORMAT="%s [ %s ] [ %s ] %s"  # デフォルトのログフォーマット
 LOG_LEVEL=${LOG_LEVEL:-"DEBUG"}  # デフォルトのログレベル
 TIMER_START=0
@@ -133,7 +133,17 @@ getMsg() {
   fi
 
   local message
-  message=$(awk -v id="${msg_id}" -F= '$1 == id {print $2}' "${INFRA_MSG_CONF}")
+  message=$(awk -v id="${msg_id}" '
+    /^[[:space:]]*$/ { next }
+    /^#/ { next }
+    NF >= 3 && $1 == id {
+      for (i = 3; i <= NF; i++) {
+        printf "%s%s", (i > 3 ? OFS : ""), $i
+      }
+      print ""
+      exit
+    }
+  ' "${INFRA_MSG_CONF}")
 
   if [[ -z "${message}" ]]; then
     logOut "WARNING" "Message ID not found: ${msg_id}"
@@ -252,20 +262,19 @@ expandMsg() {
 # return  N/A
 # --------------------------------------------------
 logSystem() {
-    msg_conf="$ETC_PATH/$hostname/message.conf"
-
-    if [ ! -f "$msg_conf" ]; then
-        logOut "ERROR" "Configuration file can not be found [ $msg_conf ]."
+    if [ ! -f "${INFRA_MSG_CONF}" ]; then
+        logOut "ERROR" "Configuration file can not be found [ ${INFRA_MSG_CONF} ]."
         exitLog 2
     fi
 
-    fac_serv=$(awk -v id="$1" 'NF >= 2 && $1 == id { print $2; exit }' "$msg_conf")
+    fac_serv=$(awk -v id="$1" 'NF >= 2 && $1 == id { print $2; exit }' "${INFRA_MSG_CONF}")
 
     if [ -z "$fac_serv" ]; then
         logOut "WARNING" "Logger priority is missing for id [$1]. Message not sent to syslog."
         return
     fi
 
+    msg_conf="${INFRA_MSG_CONF}"
     raw_msg=$(getSysMsg "$1" "$fac_serv")
     e_msg=$(expandMsg "$raw_msg")
     logOut "[DEBUG] fac_serv=[$fac_serv]" >&2
