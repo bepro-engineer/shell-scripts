@@ -226,6 +226,8 @@ parseArgs() {
 # return  N/A
 # --------------------------------------------------
 getSysMsg() {
+    local msg_conf="$3"
+
     awk -v id="$1" -v field="$2" '
         /^[[:space:]]*$/ { next }
         /^#/ { next }
@@ -294,7 +296,7 @@ logSystem() {
     fi
 
     msg_conf="${INFRA_MSG_CONF}"
-    raw_msg=$(getSysMsg "$1" "$fac_serv")
+    raw_msg=$(getSysMsg "$1" "$fac_serv" "$msg_conf")
     e_msg=$(expandMsg "$raw_msg")
 
     logOut "DEBUG" "fac_serv=[$fac_serv]"
