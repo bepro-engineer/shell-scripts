@@ -141,7 +141,7 @@ getMsg() {
   fi
 
   # 変数を二重展開してメッセージを返却
-  eval "printf '%s\n' \"${message}\""
+  expandMsg "${message}"
 }
 
 # タイマー開始
@@ -235,6 +235,17 @@ getSysMsg() {
 }
 
 # --------------------------------------------------
+# Expand the variables in the message.
+# --------------------------------------------------
+# param1  messages
+# return  expanded messages
+# --------------------------------------------------
+expandMsg() {
+  local message="$1"
+  eval "printf '%s\n' \"${message}\""
+}
+
+# --------------------------------------------------
 # Output the system log.
 # --------------------------------------------------
 # param1  messages id
@@ -256,8 +267,7 @@ logSystem() {
     fi
 
     raw_msg=$(getSysMsg "$1" "$fac_serv")
-    e_msg=$(eval "printf '%s\n' \"$raw_msg\"")
-
+    e_msg=$(expandMsg "$raw_msg")
     logOut "[DEBUG] fac_serv=[$fac_serv]" >&2
     logOut "[DEBUG] e_msg=[$e_msg]" >&2
 
