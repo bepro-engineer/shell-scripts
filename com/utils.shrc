@@ -643,6 +643,7 @@ isHostAlive() {
 # ------------------------------------------------------------
 confirmAction() {
   local message="${1:-"Are you sure? [y/N]"}"
+  local response
   read -r -p "$message " response
   case "$response" in
     [yY][eE][sS]|[yY]) return 0 ;;
