@@ -298,7 +298,9 @@ abort() {
 #   - May overmatch if $1 is a partial string (e.g. "chrony" matches "chronyc").
 # ------------------------------------------------------------
 isProcessAlive() {
-  cnt=$(ps auxw | grep "$1" | grep -v grep | grep -v "$SCRIPT_NAME" | wc -l)
+  local cnt
+  cnt=$(ps auxw | grep -F "$1" | grep -v grep | grep -v "$SCRIPT_NAME" | wc -l)
+
   if [ "$cnt" -eq 0 ]; then
     return 1
   fi
