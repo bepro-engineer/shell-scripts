@@ -109,7 +109,7 @@ extractFunctionList() {
   logOut "DEBUG" "target: ${target_file}"
   logOut "DEBUG" "抽出開始"
 
-  func_list=$(grep -E '^[[:blank:]]*(function[[:blank:]]+[a-zA-Z_][a-zA-Z0-9_]*|[a-zA-Z_][a-zA-Z0-9_]*[[:blank:]]*\()' "${target_file}" \
+  func_list=$(grep -E '^[[:blank:]]*(function[[:blank:]]+[a-zA-Z_][a-zA-Z0-9_]*([[:blank:]]*\(\))?[[:blank:]]*\{?|[a-zA-Z_][a-zA-Z0-9_]*[[:blank:]]*\(\)[[:blank:]]*\{?)' "${target_file}" \
     | sed 's/^[[:blank:]]*//' \
     | sed 's/^function[[:blank:]]*//' \
     | sed 's/[[:blank:]]*(.*//' \
