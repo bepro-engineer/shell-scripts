@@ -94,8 +94,8 @@ countStepLines() {
 
   step_count=$(sed '/^[[:blank:]]*#/d;/^[[:blank:]]*$/d' "${target_file}" | wc -l | awk '{print $1}')
 
-  logOut "INFO" "target: ${target_file}"
-  logOut "INFO" "step count: ${step_count}"
+  logOut "DEBUG" "target: ${target_file}"
+  logOut "DEBUG" "step count: ${step_count}"
   echo "${step_count}"
 }
 
@@ -107,7 +107,7 @@ scope="pre"
 startLog
 trap "terminate" HUP INT QUIT TERM
 
-logOut "INFO" "args: [$*]"
+logOut "DEBUG" "args: [$*]"
 
 if acquireLock; then
   logOut "INFO" "successfully locked."

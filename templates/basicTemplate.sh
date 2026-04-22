@@ -95,7 +95,7 @@ scope="pre"
 startLog
 trap "terminate" EXIT HUP INT QUIT TERM
 
-logOut "INFO" "args: [$*]"
+logOut "DEBUG" "args: [$*]"
 
 if acquireLock; then
   logOut "INFO" "successfully locked."
