@@ -9,7 +9,8 @@ Shellスクリプト群の作成・整理・見直しを行う。
 - 修正は必ず関数単位で行う
 - 既存コードの全面書き換えはしない
 - まず現状整理、次に問題点抽出、その後に修正を行う
-- 対象は都度指定された com 配下のシェルスクリプトとする
+- 既存修正対象は都度指定された com 配下のシェルスクリプトとする
+- 新規作成時は用途に応じて bin/com/etc/log/rep/tmp を使い分ける
 
 ## Shell Script Rules
 
@@ -44,19 +45,43 @@ Shellスクリプト群の作成・整理・見直しを行う。
 
 ### Directory Rules
 
-Shell の前提ディレクトリ構成は以下とする。
+新規の Shell スクリプト作成時は、用途ごとに配置先を必ず分けること。
+ファイルの役割に応じて、以下のディレクトリへ配置すること。
 
-- `projects/scripts/bin`
-- `projects/scripts/com`
-- `projects/scripts/etc`
-- `projects/scripts/log`
-- `projects/scripts/rep`
-- `projects/scripts/tmp`
+- 実行ファイルは `projects/scripts/bin`
+- 共通シェルスクリプトは `projects/scripts/com`
+- 設定ファイルは `projects/scripts/etc`
+- ログ関連ファイルは `projects/scripts/log`
+- 出力レポートなどは `projects/scripts/rep`
+- 一時ファイルは `projects/scripts/tmp`
+
+ファイルの役割と配置先が一致していることを必ず確認すること。
+用途に合わないディレクトリへ勝手に配置しないこと。
+新規ファイル作成時は、必ずこのディレクトリルールに従うこと。
 
 共通スクリプトは以下を前提とする。
 
 - ログ出力: `projects/scripts/com/logger.shrc`
 - 共通処理: `projects/scripts/com/utils.shrc`
+
+### New File Rules
+
+新規ファイル作成時は、必ず既存のディレクトリ規約・命名規約・コメント規約に従うこと。
+指示されていない新規ディレクトリは作成しないこと。
+新規作成する場合も、まず既存の `logger.shrc` と `utils.shrc` の利用可否を確認し、共通化できる処理を重複実装しないこと。
+
+### Execution File Rules
+
+実行ファイル `.sh` には用途に応じた shebang を記載すること。
+共通シェルスクリプト `.shrc` は単独実行を前提にしないこと。
+実行ファイルだけに実行権限を付与し、共通 `.shrc` の実行権限は必要性を確認してから扱うこと。
+
+### Source Rules
+
+共通関数を利用する Shell Script は、必要な `.shrc` を明示的に source して使用すること。
+ログ出力が必要な場合は `logger.shrc` を読み込むこと。
+共通処理を利用する場合は `utils.shrc` を読み込むこと。
+読み込み可能な前提を確認せずに関数を直接呼ばないこと。
 
 ### Logging Rules
 
@@ -66,22 +91,24 @@ Shell の前提ディレクトリ構成は以下とする。
 
 ```bash
 logOut "INFO" "message"
-logOut "WARNING" "message"
+logOut "WARN" "message"
 logOut "ERROR" "message"
 ```
 
 ### Function Comment Rules
 
 すべての関数には必ずコメントを付けること。
+既存関数の修正時も、新規関数の追加時も、関数コメントは省略しないこと。
+コメント未記載の関数を新規追加しないこと。
 コメント形式は必ず以下のテンプレートを使うこと。
 
-```テキスト
+```
 # ------------------------------------------------------------------
 # 関数名　　：xxx
 # 概要　　　：○○○
 # 説明　　　：
-# ○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○
-# ○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○
+#   ○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○
+#   ○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○
 #
 # 引数　　　：説明
 # 戻り値　　：説明
@@ -127,3 +154,5 @@ logOut "ERROR" "message"
 - 作業は feature ブランチで行う
 - 対象ファイルだけ add する
 - main へ merge 後、push と branch 削除まで行う
+- `.task/tasks.json` と `.task/config.json` は Git 管理対象とする
+- `.task/` を `.gitignore` で除外しない
