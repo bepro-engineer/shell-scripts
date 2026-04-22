@@ -349,6 +349,15 @@
       "branch": "feature/task-28-checkcommandexists-return",
       "elapsedMinutes": 6,
       "description": "checkCommandExists() の末尾にあった冗長な return $? を削除。最後の command -v \"$1\" >/dev/null 2>&1 の終了ステータスを関数戻り値としてそのまま返す形に整理。bash -n com/utils.shrc、checkCommandExists bash、checkCommandExists command_that_does_not_exist_12345 で確認済み。"
+    },
+    {
+      "id": 29,
+      "title": "Shell雛形テンプレートのレビューと修正点整理",
+      "status": "completed",
+      "priority": "medium",
+      "dueDate": "2026-04-23",
+      "createdAt": "2026-04-22T07:38:18.990Z",
+      "updatedAt": "2026-04-22T08:34:28.415Z"
     }
   ]
 }
