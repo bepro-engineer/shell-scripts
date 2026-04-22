@@ -422,39 +422,6 @@ isPortAlive() {
 }
 
 # ------------------------------------------------------------
-# Check if the specified keyword is present in the process table.
-# ------------------------------------------------------------
-# Purpose:
-#   Verifies whether the given keyword is present in the system's
-#   process table.
-# Arguments:
-#   $1: Keyword to search for (e.g., process name or part of a command line)
-# Returns:
-#   0: The keyword is found in the process table
-#   1: The keyword is not found in the process table
-# Notes:
-#   - Excludes the `grep` process itself from the search.
-#   - If no keyword is provided, the function logs an error and returns 1.
-#   - Ensure that the keyword does not unintentionally match unrelated processes.
-# ------------------------------------------------------------
-isKeywordInProcess() {
-  local keyword="$1"
-
-  # Validate input
-  if [ -z "$keyword" ]; then
-    logOut "ERROR" "No keyword specified for process search."
-    return 1
-  fi
-
-  # Check for the keyword in the process table
-  if ps auxw | grep -F "$keyword" | grep -v grep >/dev/null; then
-    return 0  # Keyword found
-  else
-    return 1  # Keyword not found
-  fi
-}
-
-# ------------------------------------------------------------
 # Check the process count against a specified range.
 # ------------------------------------------------------------
 # Purpose:
