@@ -68,24 +68,24 @@ Shellスクリプト群の作成・整理・見直しを行う。
 
 ## ディレクトリ規約
 
-新規の Shell スクリプト作成時は、用途ごとに配置先を必ず分けること。  
+新規の Shell スクリプト作成時は、用途ごとに配置先を必ず分けること。
 ファイルの役割に応じて、以下のディレクトリへ配置すること。
 
-- 実行ファイルは `projects/scripts/bin`
-- 共通シェルスクリプトは `projects/scripts/com`
-- 設定ファイルは `projects/scripts/etc`
-- ログ関連ファイルは `projects/scripts/log`
-- 出力レポートなどは `projects/scripts/rep`
-- 一時ファイルは `projects/scripts/tmp`
+- 実行ファイルは `bin`
+- 共通シェルスクリプトは `com`
+- 設定ファイルは `etc`
+- ログ関連ファイルは `log`
+- 出力レポートなどは `rep`
+- 一時ファイルは `tmp`
 
-ファイルの役割と配置先が一致していることを必ず確認すること。  
-用途に合わないディレクトリへ勝手に配置しないこと。  
+ファイルの役割と配置先が一致していることを必ず確認すること。
+用途に合わないディレクトリへ勝手に配置しないこと。
 新規ファイル作成時は、必ずこのディレクトリルールに従うこと。
 
 共通スクリプトは以下を前提とする。
 
-- ログ出力: `projects/scripts/com/logger.shrc`
-- 共通処理: `projects/scripts/com/utils.shrc`
+- ログ出力: `com/logger.shrc`
+- 共通処理: `com/utils.shrc`
 
 ## 新規ファイル作成ルール
 
@@ -107,70 +107,43 @@ Shellスクリプト群の作成・整理・見直しを行う。
 - 共通処理を利用する場合は `utils.shrc` を読み込む
 - 読み込み可能な前提を確認せずに関数を直接呼ばない
 
-## 新規Shellのヘッダコメント規約
+## Usageルール
 
-新規作成する実行Shellには、先頭コメントに必ず Usage を記載すること。
+新規作成する実行Shellには、ヘッダコメントと実行時の両方に Usage を実装すること。
 
-記載位置は shebang の直後とする。
+### ヘッダコメント
 
-最低限、下記を含めること。
+shebang の直後に Usage を記載する。最低限下記を含めること。
 
     --------------------------------------
     Usage:
     sh スクリプト名 引数
     --------------------------------------
 
-例:
+必要に応じて `Options:` `Example:` を追加してよい。実装に存在しない項目は追加しない。
+
+### 表示フォーマット
+
+- 先頭行と最終行は正確に `--------------------------------------` を出力する（38文字）
+- 区切りラインの文字数や記号を勝手に変更しない
+- `Usage:` 見出しを必ず入れる
+- 必要に応じて `Options:` `Example:` を入れる
+- 実行時に表示する内容はヘッダコメントの Usage と一致させる
+- 各行は期待する表示例と1行単位で一致させる
+- 先頭が `-` の文字列や区切りラインを `printf` の format 文字列にしない
+- ハイフン始まりの行は `printf '%s\n' '文字列'` の形式で出力する
+
+Usage 見本:
 
     --------------------------------------
     Usage:
     sh listShellDependencies.sh <file_path>
-    --------------------------------------
-
-必要に応じて、下記も追加してよい。
-
-- `Command:`
-- `Options:`
-- `Example:`
-
-記載ルールは下記とする。
-
-- Usage は省略しない
-- 実際の引数仕様と一致させる
-- 実装時に引数が増減した場合は Usage も必ず更新する
-- 既存Shellの記載有無には引っ張られず、新規作成時は必須とする
-- 実装に存在しない項目は勝手に追加しない
-- 表示内容は見本の形式に寄せて整形する
-- 先頭と末尾に区切りラインを入れる
-- `Usage:` 見出しを入れる
-- 必要に応じて `Command:` `Options:` `Example:` を入れる
-
-Usage の見本:
-
-    --------------------------------------
-    Usage:
-    sh monitor_tomcat_app.sh -c <command> [-b <base_url>] [-u <user> -p <password>] [-a <context_path> | -f <file>]
-
-    Command:
-    list|status|show|start|stop
 
     Options:
-    -c command : list|status|show|start|stop
-    -b base_url : Tomcat base URL (default: http://localhost:8080)
-    -u user : Tomcat Manager user (start/showで必須)
-    -p password : Tomcat Manager password (start/showで必須)
-    -a context_path : context path (例: /docs)
-    -f file : 1行1パスのファイル (#コメント、空行は無視)
+    -h, --help : Usage を表示
 
     Example:
-    sh monitor_tomcat_app.sh -c list -b http://localhost:8080
-    sh monitor_tomcat_app.sh -c list -b http://localhost:8081
-    sh monitor_tomcat_app.sh -c start -b http://localhost:8080 -u admin -p admin123 -a /docs
-    sh monitor_tomcat_app.sh -c start -b http://localhost:8080 -u admin -p admin123 -f /opt/tomcat9/conf/apps_online.lst
-    sh monitor_tomcat_app.sh -c start -b http://localhost:8081 -u admin -p admin123 -f /opt/tomcat9/conf/apps_batch.lst
-    sh monitor_tomcat_app.sh -c status -b http://localhost:8080 -a /docs
-    sh monitor_tomcat_app.sh -c show -b http://localhost:8080 -u admin -p admin123 -a /docs
-    sh monitor_tomcat_app.sh -c stop -b http://localhost:8080 -a /docs
+    sh listShellDependencies.sh /path/to/target.sh
     --------------------------------------
 
 ## Usage実装ルール
@@ -188,29 +161,14 @@ Usage の見本:
 - ファイル不存在などの実体エラーは、必要なエラーログを出したうえで `JOB_ER` で終了する
 - `abort` を使うことで `exitLog` を通らない実装にしない
 
-## Usage表示フォーマットルール
+### レビュー観点
 
-- Usage 表示は見本の書式に合わせる
-- 先頭行と最終行には、正確に `--------------------------------------` を出力する
-- 区切りラインの文字数や記号を勝手に変更しない
-- `Usage:` 見出しを必ず入れる
-- 必要に応じて `Command:` `Options:` `Example:` を入れる
-- 実装に存在しない項目は追加しない
-- 実行時に表示する Usage の内容は、ヘッダコメントの Usage と一致させる
-- Usage の各行は、期待する表示例と1行単位で一致させる
-- 先頭が `-` の文字列や区切りラインを `printf` の format 文字列にしない
-- ハイフン始まりの行は `printf '%s\n' '文字列'` の形式で出力する
-
-## Usageレビュー確認項目
-
-- Usage 表示用の関数が表示専用になっているか
-- 引数チェック関数の中で `abort` や `exitLog` を呼んでいないか
+- Usage 表示用の関数が表示専用になっているか（`abort` / `exitLog` を呼んでいないか）
+- 引数チェック関数が戻り値のみを返す構成になっているか
 - 呼び出し元で `exitLog` を通る構成になっているか
-- 引数なしで Usage 表示後に `ENDED LOG` まで出るか
-- `-h` `--help` で Usage 表示後に `ENDED LOG` まで出るか
-- 不正オプションで Usage 表示後に `ENDED LOG` まで出るか
-- 先頭行が正確に `--------------------------------------` になっているか
-- 最終行が正確に `--------------------------------------` になっているか
+- `-h` / `--help` で Usage 表示後に `ENDED LOG` まで出るか
+- 引数なし・不正オプションで Usage 表示後に `ENDED LOG` まで出るか
+- 先頭行・最終行が正確に `--------------------------------------` になっているか
 - Usage 表示例と1行単位で完全一致しているか
 - 先頭が `-` の文字列を `printf` の format 文字列にしていないか
 
@@ -246,17 +204,17 @@ Usage の見本:
 - コメント形式は必ず以下のテンプレートを使う
 
 ```
-  # ------------------------------------------------------------------
-  # 関数名　　：xxx
-  # 概要　　　：○○○
-  # 説明　　　：
-  # ○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○
-  # ○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○
-  #
-  # 引数　　　：説明
-  # 戻り値　　：説明
-  # 使用箇所　：説明
-  # ------------------------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：xxx
+# 概要　　　：○○○
+# 説明　　　：
+#   ○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○
+#   ○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○○
+#
+# 引数　　　：説明
+# 戻り値　　：説明
+# 使用箇所　：説明
+# ------------------------------------------------------------------
 ```
 
 ## 実装ルール
