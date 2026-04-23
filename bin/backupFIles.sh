@@ -2,13 +2,13 @@
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 #
 # Usage:
-#    bash backupFIles.sh -b <backup_directory>
+#    bash backupFiles.sh -b <backup_directory>
 #
 # Options:
 #    -b backup_directory : バックアップ保存先ディレクトリ
 #
 # Example:
-#    sh backupFiles.sh -b /path/to/backup
+#    bash backupFiles.sh -b /path/to/backup
 #
 # Description:
 # - 指定されたファイル・ディレクトリをアーカイブ
@@ -26,8 +26,9 @@
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 
 # 共通クラスの読み込み
-. "$(dirname "$0")/../com/utils.shrc"
-. "$(dirname "$0")/../com/logger.shrc"
+# shellcheck disable=SC1091
+. "$(dirname "${BASH_SOURCE[0]}")/../com/logger.shrc"
+. "$(dirname "${BASH_SOURCE[0]}")/../com/utils.shrc"
 
 # ========================================
 # 実行ユーザー確認（root限定）
@@ -35,17 +36,21 @@
 runAs root "$@"
 
 # ========================================
-# 定数定義
+# 変数定義
 # ========================================
+scope="var"
 readonly JOB_OK=0
 readonly JOB_WR=1
 readonly JOB_ER=2
 
-# 変数定義
 target_list="${ETC_PATH}/target.cfg"
 ignore_list="${ETC_PATH}/ignore.cfg"
 backup_dir=""
 backup_file=""
+rc=${JOB_ER}
+
+# 警告メッセージ定義
+warn_msg01="作成されたバックアップを削除しました。"
 
 # エラーメッセージ定義
 err_msg01="バックアップ保存先が指定されていません。"
@@ -60,9 +65,10 @@ err_msg08="異常終了のため、バックアップを削除します。"
 # ========================================
 # 関数定義
 # ========================================
+scope="func"
 
 # ------------------------------------------------------------------
-# 関数名　　：showUsage
+# 関数名　　：usage
 # 概要　　　：使用方法を標準エラーに出力する
 # 説明　　　：
 #   スクリプトの使用方法を標準エラー出力へ出力します。
@@ -72,20 +78,32 @@ err_msg08="異常終了のため、バックアップを削除します。"
 # 戻り値　　：なし
 # 使用箇所　：pre-process
 # ------------------------------------------------------------------
-showUsage() {
-  printf '%s\n' '--------------------------------------' >&2
-  printf 'Usage:\n' >&2
-  printf 'bash backupFIles.sh -b <backup_directory>\n' >&2
-  printf '\n' >&2
-  printf 'Options:\n' >&2
-  printf '%s\n' '-b backup_directory : バックアップ保存先ディレクトリ' >&2
-  printf '\n' >&2
-  printf 'Example:\n' >&2
-  printf 'sh backupFiles.sh -b /path/to/backup\n' >&2
-  printf '%s\n' '--------------------------------------' >&2
+usage() {
+    cat >&2 <<'EOF'
+--------------------------------------
+  Usage: 
+    bash backupFiles.sh -b <backup_directory>
+
+  Options:
+    -b backup_directory : バックアップ保存先ディレクトリ
+
+  Example:
+    bash backupFiles.sh -b /path/to/backup
+--------------------------------------
+EOF
 }
 
-# 引数の妥当性確認
+# ------------------------------------------------------------------
+# 関数名　　：checkArg
+# 概要　　　：引数および実行前提条件を確認する
+# 説明　　　：
+#   バックアップ保存先ディレクトリの指定有無、存在確認、書き込み権限を確認します。
+#   あわせて、ターゲットリスト、除外リスト、およびターゲットリスト内の対象実体を確認します。
+#
+# 引数　　　：なし
+# 戻り値　　：なし
+# 使用箇所　：pre-process
+# ------------------------------------------------------------------
 checkArg() {
     if [ -z "$backup_dir" ]; then
         logOut "ERROR" "${err_msg01}"
@@ -93,7 +111,7 @@ checkArg() {
         exitLog ${JOB_ER}
     fi
     if [ ! -d "$backup_dir" ]; then
-        logOut "WARNING" "${err_msg02} (${backup_dir})"
+        logOut "WARN" "${err_msg02} (${backup_dir})"
         mkdir -p "$backup_dir"
     fi
     if [ ! -w "$backup_dir" ]; then
@@ -105,55 +123,85 @@ checkArg() {
         exitLog ${JOB_ER}
     fi
     if [ ! -f "$ignore_list" ]; then
-        logOut "WARNING" "${err_msg05} (${ignore_list})"
+        logOut "WARN" "${err_msg05} (${ignore_list})"
     fi
 
     # 【追加】ターゲットリスト内のファイルが存在するか確認
     while read line; do
         if [ ! -e "$line" ]; then
-            logOut "ERROR" "ターゲットファイルが見つかりません: ${line}"
+            logOut "ERROR" "${err_msg04}: ${line}"
             exitLog ${JOB_ER}
         fi
     done < "$target_list"
 }
 
-# 異常終了時のクリーンアップ処理
-cleanup() {
-    logOut "${err_msg08}" "ERROR"
-    if [ -n "${backup_file}" && -f "${backup_file}" ]; then
+# ------------------------------------------------------------------
+# 関数名　　：terminate
+# 概要　　　：異常終了時の後始末を行う
+# 説明　　　：
+#   異常終了時にエラーログを出力し、作成途中のバックアップファイルが存在する場合は削除します。
+#   後始末完了後は、異常終了コードで終了処理を行います。
+#
+# 引数　　　：なし
+# 戻り値　　：なし
+# 使用箇所　：HUP INT QUIT TERM シグナル受信時の `trap`
+# ------------------------------------------------------------------
+terminate() {
+    logOut "ERROR" "${err_msg08}"
+    if [ -n "${backup_file}" ] && [ -f "${backup_file}" ]; then
         rm -f "${backup_file}"
-        logOut "作成されたバックアップを削除しました: ${backup_file}" "WARNING"
+        logOut "WARN" "${warn_msg01}: ${backup_file}"
     fi
     exitLog ${JOB_ER}
 }
 
-# バックアップ処理
+# ------------------------------------------------------------------
+# 関数名　　：executeBackup
+# 概要　　　：バックアップファイルを作成する
+# 説明　　　：
+#   現在日時をもとにバックアップファイル名を生成し、ターゲットリストをもとに
+#   tar アーカイブを作成します。アーカイブ作成に失敗した場合は terminate を呼び出します。
+#
+# 引数　　　：なし
+# 戻り値　　：なし
+# 使用箇所　：main-routine
+# ------------------------------------------------------------------
 executeBackup() {
     date_stamp="$(getCurrentDate)"
-    echo "DEBUG: date_stamp=${date_stamp}"
+    logOut "DEBUG" "date_stamp=${date_stamp}"
     backup_file="${backup_dir}/backup_${date_stamp}.tar.gz"
 
-    logOut "バックアップ開始: ${backup_file}" "INFO"
+    logOut "INFO" "バックアップ開始: ${backup_file}"
 
     # tar でアーカイブを作成
-    logOut "INFO" "tarアーカイブ対象のリスト:"
+    logOut "DEBUG" "tarアーカイブ対象のリスト:"
     cat "${target_list}" | while read line; do
-        logOut "INFO" "  - ${line}"
+        logOut "DEBUG" "  - ${line}"
     done
     /bin/tar --exclude-from="${ignore_list}" -czf "${backup_file}" -T "${target_list}"
 
      rc=$?
     if [ $rc -ne $JOB_OK ]; then
-        logOut "${err_msg06}" "ERROR"
-        cleanup
+        logOut "ERROR" "${err_msg06}"
+        terminate
     fi
 
-    logOut "バックアップ完了: ${backup_file}" "INFO"
+    logOut "INFO" "バックアップ完了: ${backup_file}"
 }
 
-# 古いバックアップの削除
+# ------------------------------------------------------------------
+# 関数名　　：cleanOldBackups
+# 概要　　　：古いバックアップファイルを削除する
+# 説明　　　：
+#   バックアップ保存先ディレクトリ配下から、作成後 7 日を超えた
+#   バックアップファイルを検索し、削除します。削除失敗時は警告ログを出力します。
+#
+# 引数　　　：なし
+# 戻り値　　：なし
+# 使用箇所　：main-routine
+# ------------------------------------------------------------------
 cleanOldBackups() {
-    find "${backup_dir}" -type f -name "backup_*.tar.gz" -mtime +7 -exec rm {} + || logOut "${err_msg07}" "WARNING"
+    find "${backup_dir}" -type f -name "backup_*.tar.gz" -mtime +7 -exec rm {} + || logOut "WARN" "${err_msg07}"
 }
 
 # ----------------------------------------------------------
@@ -168,14 +216,15 @@ startLog "backupFiles.sh バックアップ処理開始"
 while getopts "b:" opt; do
     case $opt in
         b) backup_dir="$OPTARG" ;;
-        *) usage ;;
+        *) usage
+        exitLog ${JOB_ER} ;;
     esac
 done
 
 checkArg
 
-# `trap` 設定（異常終了時に cleanup() を呼び出し）
-trap cleanup ERR
+# `trap` 設定（異常終了時に terminate() を呼び出し）
+trap "terminate" HUP INT QUIT TERM
 
 # ----------------------------------------------------------
 # main-routine
