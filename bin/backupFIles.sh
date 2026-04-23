@@ -1,10 +1,14 @@
 #!/bin/sh
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 #
-# logger.sh ver.1.0.0 2025.02.20
-#
 # Usage:
-#     sh backupFiles.sh -b [ 格納先ディレクトリ ]
+#    bash backupFIles.sh -b <backup_directory>
+#
+# Options:
+#    -b backup_directory : バックアップ保存先ディレクトリ
+#
+# Example:
+#    sh backupFiles.sh -b /path/to/backup
 #
 # Description:
 # - 指定されたファイル・ディレクトリをアーカイブ
