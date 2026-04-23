@@ -99,7 +99,10 @@ checkArgs() {
 #     - source "../com/utils.shrc"
 #     - . /path/to/file
 #     - . "../com/logger.shrc"
-#   変数展開（$( ) / ${ }）を含む動的パス行は抽出対象外とします。
+#     - . "$(dirname "${BASH_SOURCE[0]}")/../com/logger.shrc"
+#   変数展開を含まない静的パス、および
+#   $(dirname "${BASH_SOURCE[0]}") を先頭に持つパスを抽出対象とします。
+#   それ以外の変数展開を含む動的パス行は抽出対象外とします。
 #   0件の場合は rc に JOB_WR をセットします。
 #
 # 引数　　　：$1:対象ファイルパス
@@ -115,12 +118,12 @@ extractDependencies() {
   logOut "DEBUG" "抽出開始"
 
   dep_list=$(grep -E '^[[:blank:]]*(source[[:blank:]]+|\.[[:blank:]]+)' "${target_file}" \
-    | grep -v '\$' \
+    | grep -E '^[^$]*$|\$\(dirname "\$\{BASH_SOURCE\[0\]\}"\)' \
     | sed 's/^[[:blank:]]*//' \
     | sed 's/^source[[:blank:]]*//' \
     | sed 's/^\.[[:blank:]]*//' \
     | sed "s/^[\"']//" \
-    | sed "s/[\"'].*$//")
+    | sed "s/[\"']$//")
 
   if [ -n "${dep_list}" ]; then
     count=$(printf '%s\n' "${dep_list}" | wc -l | awk '{print $1}')
