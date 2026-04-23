@@ -61,10 +61,28 @@ err_msg08="異常終了のため、バックアップを削除します。"
 # 関数定義
 # ========================================
 
-# 使用方法の表示
-usage() {
-    echo "Usage: $0 -b <backup_directory>"
-    exit ${JOB_ER}
+# ------------------------------------------------------------------
+# 関数名　　：showUsage
+# 概要　　　：使用方法を標準エラーに出力する
+# 説明　　　：
+#   スクリプトの使用方法を標準エラー出力へ出力します。
+#   引数不足・不正引数・ヘルプ指定時に呼び出されます。
+#
+# 引数　　　：なし
+# 戻り値　　：なし
+# 使用箇所　：pre-process
+# ------------------------------------------------------------------
+showUsage() {
+  printf '%s\n' '--------------------------------------' >&2
+  printf 'Usage:\n' >&2
+  printf 'bash backupFIles.sh -b <backup_directory>\n' >&2
+  printf '\n' >&2
+  printf 'Options:\n' >&2
+  printf '%s\n' '-b backup_directory : バックアップ保存先ディレクトリ' >&2
+  printf '\n' >&2
+  printf 'Example:\n' >&2
+  printf 'sh backupFiles.sh -b /path/to/backup\n' >&2
+  printf '%s\n' '--------------------------------------' >&2
 }
 
 # 引数の妥当性確認
