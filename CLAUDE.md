@@ -143,7 +143,7 @@ Usage 見本:
       -h, --help : Usage を表示
 
     Example:
-      sh listShellDependencies.sh /path/to/target.sh
+      bash listShellDependencies.sh /path/to/target.sh
     --------------------------------------
 
 ## Usage実装ルール
@@ -153,13 +153,22 @@ Usage 見本:
 - Usage 表示用の関数の中で `abort` を呼ばない
 - Usage 表示用の関数の中で `exitLog` を呼ばない
 - Usage 表示用の関数の中で終了制御をしない
+- オプションは、実装上の制約がない限り `-` 1つの短縮形を基本とする
+- `--help` のような長い形式は、明示的に必要な場合だけ追加する
+- Usage はヘッダコメントだけで終わらせない
+- Usage 表示用の関数は表示専用にする
+  ...
 - 判定と終了制御は分離する
 - 引数チェック関数は、判定結果を戻り値で呼び出し元へ返す
 - 呼び出し元で `rc` を設定し、必ず `exitLog "${rc}"` を通して終了する
-- `-h` `--help` は Usage 表示後に `JOB_OK` で終了する
+- help オプションを実装する場合は、Usage 表示後に `JOB_OK` で終了する
 - 引数なし、引数過多、不正オプションは Usage 表示後に `JOB_ER` で終了する
 - ファイル不存在などの実体エラーは、必要なエラーログを出したうえで `JOB_ER` で終了する
 - `abort` を使うことで `exitLog` を通らない実装にしない
+- 引数チェック関数は、判定のみを返す方式を必須としない
+- 引数不正を検知した時点で、当該関数内で Usage 表示と exitLog により終了してよい
+- ただし、同一スクリプト内で引数エラー時の終了方式は統一する
+- 戻り値返却方式を採用する場合のみ、呼び出し元で rc 判定と exitLog を行う
 
 ```
 usage() 見本:
@@ -168,13 +177,13 @@ usage() 見本:
       cat >&2 <<'EOF'
   --------------------------------------
     Usage:
-       bash backupFIles.sh -b <backup_directory>
+       bash backupFiles.sh -b <backup_directory>
 
     Options:
       -b backup_directory : バックアップ保存先ディレクトリ
 
     Example:
-      bash backupFIles.sh -b /path/to/backup
+      bash backupFiles.sh -b /path/to/backup
   --------------------------------------
   EOF
     }
