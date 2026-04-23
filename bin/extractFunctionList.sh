@@ -59,30 +59,57 @@ terminate() {
 }
 
 # ------------------------------------------------------------------
+# 関数名　　：showUsage
+# 概要　　　：使用方法を標準エラーに出力する
+# 説明　　　：
+#   スクリプトの使用方法を標準エラー出力へ出力します。
+#   引数不足・不正引数・ヘルプ指定時に呼び出されます。
+#
+# 引数　　　：なし
+# 戻り値　　：なし
+# 使用箇所　：pre-process
+# ------------------------------------------------------------------
+showUsage() {
+  printf '%s\n' '--------------------------------------' >&2
+  printf 'Usage:\n' >&2
+  printf 'sh extractFunctionList.sh <file_path>\n' >&2
+  printf '\n' >&2
+  printf 'Options:\n' >&2
+  printf '%s\n' '-h, --help : Usage を表示' >&2
+  printf '\n' >&2
+  printf 'Example:\n' >&2
+  printf 'sh extractFunctionList.sh /path/to/target.sh\n' >&2
+  printf '%s\n' '--------------------------------------' >&2
+}
+
+# ------------------------------------------------------------------
 # 関数名　　：checkArgs
 # 概要　　　：引数の妥当性を確認する
 # 説明　　　：
-#   引数が1つ指定されているか、対象ファイルの存在・読み取り可否・
-#   拡張子（.sh / .shrc）を確認します。
-#   不正な場合は abort して終了します。
+#   引数の内容を判定し、戻り値で結果を返します。
+#   終了制御・表示は呼び出し元が行います。
+#     0: 正常（続行）
+#     1: -h / --help 指定
+#     2: 引数なし・引数過多・不正オプション
+#     3: ファイル不存在
+#     4: 読み取り不可
+#     5: 非対応拡張子
 #
 # 引数　　　：$1:対象ファイルパス
-# 戻り値　　：0:正常 2:異常
+# 戻り値　　：0:正常 1:ヘルプ 2:引数エラー 3:ファイル不存在 4:読み取り不可 5:非対応拡張子
 # 使用箇所　：pre-process
 # ------------------------------------------------------------------
 checkArgs() {
-  if [ "$#" -ne 1 ]; then
-    abort "Usage: extractFunctionList.sh <file_path>"
-  fi
-  if [ ! -f "$1" ]; then
-    abort "File not found: $1"
-  fi
-  if [ ! -r "$1" ]; then
-    abort "File not readable: $1"
-  fi
+  case "${1:-}" in
+    -h|--help) return 1 ;;
+    -*)        return 2 ;;
+  esac
+  if [ "$#" -ne 1 ]; then return 2; fi
+  if [ ! -f "$1" ]; then return 3; fi
+  if [ ! -r "$1" ]; then return 4; fi
   case "$1" in
     *.sh|*.shrc) ;;
-    *) abort "Unsupported file type: $1" ;;
+    *) return 5 ;;
   esac
 }
 
@@ -143,6 +170,18 @@ else
 fi
 
 checkArgs "$@"
+case $? in
+  1) showUsage; rc=${JOB_OK}; exitLog "${rc}" ;;
+  2) case "${1:-}" in
+       -*) logOut "ERROR" "Unknown option: $1" ;;
+       '') logOut "ERROR" "Argument required." ;;
+       *)  logOut "ERROR" "Too many arguments." ;;
+     esac
+     showUsage; rc=${JOB_ER}; exitLog "${rc}" ;;
+  3) logOut "ERROR" "File not found: $1"; rc=${JOB_ER}; exitLog "${rc}" ;;
+  4) logOut "ERROR" "File not readable: $1"; rc=${JOB_ER}; exitLog "${rc}" ;;
+  5) logOut "ERROR" "Unsupported file type: $1"; rc=${JOB_ER}; exitLog "${rc}" ;;
+esac
 
 # ----------------------------------------------------------
 # main-routine
