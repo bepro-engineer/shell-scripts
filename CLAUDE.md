@@ -137,13 +137,13 @@ Usage 見本:
 
     --------------------------------------
     Usage:
-    bash listShellDependencies.sh <file_path>
+      bash listShellDependencies.sh <file_path>
 
     Options:
-    -h, --help : Usage を表示
+      -h, --help : Usage を表示
 
     Example:
-    sh listShellDependencies.sh /path/to/target.sh
+      sh listShellDependencies.sh /path/to/target.sh
     --------------------------------------
 
 ## Usage実装ルール
@@ -160,6 +160,25 @@ Usage 見本:
 - 引数なし、引数過多、不正オプションは Usage 表示後に `JOB_ER` で終了する
 - ファイル不存在などの実体エラーは、必要なエラーログを出したうえで `JOB_ER` で終了する
 - `abort` を使うことで `exitLog` を通らない実装にしない
+
+```
+usage() 見本:
+
+  usage() {
+      cat >&2 <<'EOF'
+  --------------------------------------
+    Usage:
+       bash backupFIles.sh -b <backup_directory>
+
+    Options:
+      -b backup_directory : バックアップ保存先ディレクトリ
+
+    Example:
+      bash backupFIles.sh -b /path/to/backup
+  --------------------------------------
+  EOF
+    }
+```
 
 ### レビュー観点
 
