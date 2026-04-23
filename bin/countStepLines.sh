@@ -66,42 +66,43 @@ terminate() {
 #
 # 引数　　　：なし
 # 戻り値　　：なし
-# 使用箇所　：checkArgs
+# 使用箇所　：pre-process
 # ------------------------------------------------------------------
 showUsage() {
-  printf 'Usage: countStepLines.sh <file_path>\n' >&2
+  printf '%s\n' '--------------------------------------' >&2
+  printf 'Usage:\n' >&2
+  printf 'sh countStepLines.sh <file_path>\n' >&2
+  printf '\n' >&2
+  printf 'Options:\n' >&2
+  printf '%s\n' '-h, --help : Usage を表示' >&2
+  printf '\n' >&2
+  printf 'Example:\n' >&2
+  printf 'sh countStepLines.sh /path/to/target.sh\n' >&2
+  printf '%s\n' '--------------------------------------' >&2
 }
 
 # ------------------------------------------------------------------
 # 関数名　　：checkArgs
 # 概要　　　：引数の妥当性を確認する
 # 説明　　　：
-#   -h / --help が指定された場合は使用方法を表示して正常終了します。
-#   引数が1つ指定されているか、対象ファイルが存在するかを確認します。
-#   引数不足・不正オプションの場合は使用方法を表示して abort します。
+#   引数の内容を判定し、戻り値で結果を返します。
+#   終了制御・表示は呼び出し元が行います。
+#     0: 正常（続行）
+#     1: -h / --help 指定
+#     2: 引数なし・引数過多・不正オプション
+#     3: ファイル不存在
 #
 # 引数　　　：$1:対象ファイルパス
-# 戻り値　　：0:正常 2:異常
+# 戻り値　　：0:正常 1:ヘルプ 2:引数エラー 3:ファイル不存在
 # 使用箇所　：pre-process
 # ------------------------------------------------------------------
 checkArgs() {
   case "${1:-}" in
-    -h|--help)
-      showUsage
-      exitLog "${JOB_OK}"
-      ;;
-    -*)
-      showUsage
-      abort "Unknown option: $1"
-      ;;
+    -h|--help) return 1 ;;
+    -*)        return 2 ;;
   esac
-  if [ "$#" -ne 1 ]; then
-    showUsage
-    abort "Argument required."
-  fi
-  if [ ! -f "$1" ]; then
-    abort "File not found: $1"
-  fi
+  if [ "$#" -ne 1 ]; then return 2; fi
+  if [ ! -f "$1" ]; then return 3; fi
 }
 
 # ------------------------------------------------------------------
@@ -143,6 +144,16 @@ else
 fi
 
 checkArgs "$@"
+case $? in
+  1) showUsage; rc=${JOB_OK}; exitLog "${rc}" ;;
+  2) case "${1:-}" in
+       -*) logOut "ERROR" "Unknown option: $1" ;;
+       '') logOut "ERROR" "Argument required." ;;
+       *)  logOut "ERROR" "Too many arguments." ;;
+     esac
+     showUsage; rc=${JOB_ER}; exitLog "${rc}" ;;
+  3) logOut "ERROR" "File not found: $1"; rc=${JOB_ER}; exitLog "${rc}" ;;
+esac
 
 # ----------------------------------------------------------
 # main-routine
@@ -155,6 +166,7 @@ rc=${JOB_OK}
 # ----------------------------------------------------------
 # post-process
 # ----------------------------------------------------------
+# shellcheck disable=SC2034
 scope="post"
 
 exitLog "${rc}"
