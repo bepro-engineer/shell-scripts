@@ -137,7 +137,7 @@ Usage 見本:
 
     --------------------------------------
     Usage:
-    sh listShellDependencies.sh <file_path>
+    bash listShellDependencies.sh <file_path>
 
     Options:
     -h, --help : Usage を表示
