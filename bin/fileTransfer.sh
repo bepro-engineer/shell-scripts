@@ -95,22 +95,22 @@ getFileStatus() {
 checkArgs() {
     if [ $# -lt 2 ]; then
         logOut "ERROR" "Insufficient number of arguments."
-        exit ${JOB_ER}
+        exitLog ${JOB_ER}
     fi
 
     if echo "$1" | grep -q '[*?]'; then
         logOut "ERROR" "Wildcard characters are not allowed in file path: [$1]"
-        exit ${JOB_ER}
+        exitLog ${JOB_ER}
     fi
 
     if [ ! -f "$1" ]; then
         logOut "ERROR" "Specified file does not exist: [$1]"
-        exit ${JOB_ER}
+        exitLog ${JOB_ER}
     fi
 
     if [ ! -d "$2" ]; then
         logOut "ERROR" "Specified directory does not exist: [$2]"
-        exit ${JOB_ER}
+        exitLog ${JOB_ER}
     fi
 }
 
@@ -185,7 +185,7 @@ trap "terminate" 0 1 2 3 15
 
 if ! acquireLock; then
     logOut "ERROR" "排他ロックを取得できませんでした。"
-    exit ${JOB_ER}
+    exitLog ${JOB_ER}
 fi
 
 checkArgs "$src_fp" "$dst_dir"
@@ -206,7 +206,7 @@ if [ "$mode" = "send" ]; then
 
     if [ "$file_stat" = "UNEXPECTED" ]; then
         logOut "ERROR" "不正な状態のファイルが存在します。: [$dst_fp]"
-        exit ${JOB_ER}
+        exitLog ${JOB_ER}
     fi
 
     if [ "$file_stat" = "COMPLETED" ]; then
@@ -214,7 +214,7 @@ if [ "$mode" = "send" ]; then
             logOut "INFO" "既存ファイルを削除します: $f"
             rm -f "$f" || {
                 logOut "ERROR" "ファイル削除に失敗しました: $f"
-                exit ${JOB_ER}
+                exitLog ${JOB_ER}
             }
         done
         file_stat="INITIAL"
@@ -222,14 +222,14 @@ if [ "$mode" = "send" ]; then
 
     if [ "$file_stat" = "LOADED" ]; then
         logOut "INFO" "受信側が未完了のため、送信スキップ: [$dst_fp.end]"
-        exit ${JOB_OK}
+        exitLog ${JOB_OK}
     fi
 
     if [ "$file_stat" = "INITIAL" ] || [ "$file_stat" = "LOADING" ]; then
         cp -pf "$src_fp" "$dst_fp"
         if [ $? -ne 0 ]; then
             logOut "ERROR" "ファイルのコピーに失敗しました。"
-            exit ${JOB_ER}
+            exitLog ${JOB_ER}
         fi
 
         src_hash=$(getMd5sum "$src_fp")
@@ -237,7 +237,7 @@ if [ "$mode" = "send" ]; then
 
         if [ "$src_hash" != "$dst_hash" ]; then
             logOut "ERROR" "MD5値が一致しません。転送失敗 [$src_hash] != [$dst_hash]"
-            exit ${JOB_ER}
+            exitLog ${JOB_ER}
         fi
 
         echo "$src_hash" > "${dst_fp}.end"
@@ -254,24 +254,24 @@ elif [ "$mode" = "recv" ]; then
 
     if [ "$file_stat" = "UNEXPECTED" ]; then
         logOut "ERROR" "不正な状態のファイルが存在します。: [$src_fp]"
-        exit ${JOB_ER}
+        exitLog ${JOB_ER}
     fi
 
     if [ "$file_stat" = "COMPLETED" ]; then
         logOut "INFO" "受信済みです。 [$src_fp.fin]"
-        exit ${JOB_OK}
+        exitLog ${JOB_OK}
     fi
 
     if [ "$file_stat" = "INITIAL" ] || [ "$file_stat" = "LOADING" ]; then
         logOut "INFO" "送信処理が未完了のため、受信スキップします。"
-        exit ${JOB_OK}
+        exitLog ${JOB_OK}
     fi
 
     if [ "$file_stat" = "LOADED" ]; then
         cp -pf "$src_fp" "$dst_fp"
         if [ $? -ne 0 ]; then
             logOut "ERROR" "ファイルの受信に失敗しました。"
-            exit ${JOB_ER}
+            exitLog ${JOB_ER}
         fi
 
         org_hash=$(cat "${src_fp}.end")
@@ -279,7 +279,7 @@ elif [ "$mode" = "recv" ]; then
 
         if [ "$org_hash" != "$new_hash" ]; then
             logOut "ERROR" "MD5検証失敗。 [$org_hash] != [$new_hash]"
-            exit ${JOB_ER}
+            exitLog ${JOB_ER}
         fi
 
         touch "${src_fp}.fin"
