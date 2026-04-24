@@ -114,6 +114,15 @@
 - 共通関数を利用する Shell Script は、必要な `.shrc` を明示的に source して使用する
 - ログ出力が必要な場合は `logger.shrc` を読み込む
 - 共通処理を利用する場合は `utils.shrc` を読み込む
+- 共通ファイルの読み込みでは `${BASH_SOURCE[0]}` を使用しない
+- 共通ファイルの読み込みは下記形式に固定する
+
+```bash
+. "$(dirname "$0")/../com/logger.shrc"
+. "$(dirname "$0")/../com/utils.shrc"
+```
+
+- 読み込み順序は必ず `logger.shrc` → `utils.shrc` とする
 - 読み込み可能な前提を確認せずに関数を直接呼ばない
 
 ## 実装ルール
