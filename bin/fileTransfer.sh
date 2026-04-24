@@ -181,7 +181,7 @@ fi
 scope="pre"
 
 startLog
-trap "terminate" 0 1 2 3 15
+trap "terminate" HUP INT QUIT TERM
 
 if ! acquireLock; then
     logOut "ERROR" "排他ロックを取得できませんでした。"
