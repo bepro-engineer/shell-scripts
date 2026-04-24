@@ -119,18 +119,27 @@ checkArgs() {
 # 概要　　　：使用方法を表示して終了
 # 説明　　　：
 #   スクリプトの使用方法を標準出力へ表示する。
-#   引数不正時などに呼び出され、現在の実装では関数内で終了制御を行う。
+#   終了制御は呼び出し元で行い、この関数内では行わない。
 #
 # 引数　　　：なし
-# 戻り値　　：なし（関数内で終了）
+# 戻り値　　：なし
 # 使用箇所　：引数ミス時
 # ------------------------------------------------------------------
 usage() {
-    echo "Usage: $0 -m <send|recv> -f <file_path> -t <target_dir>"
-    echo "  -m mode        (send = send file, recv = receive file)"
-    echo "  -f file path   (path to the source file)"
-    echo "  -t target dir  (path to the destination directory)"
-    exit ${JOB_ER}
+    cat <<'EOF'
+--------------------------------------
+Usage:
+bash fileTransfer.sh -m <send|recv> -f <file_path> -t <target_dir>
+
+Options:
+-m mode       : send または recv を指定（処理モード）
+-f file_path  : 処理対象のファイルパス
+-t target_dir : 出力先または受信先ディレクトリのパス
+
+Example:
+bash fileTransfer.sh -m send -f /path/to/file.txt -t /path/to/target
+--------------------------------------
+EOF
 }
 
 # ------------------------------------------------------------------
