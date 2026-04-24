@@ -80,21 +80,19 @@ terminate() {
 # 使用箇所　：parseArgs
 # ------------------------------------------------------------------
 usage() {
+    cat >&2 <<'EOF'
+--------------------------------------
+Usage:
+  bash resourceAlert.sh -m <type>
 
-  cat <<EOUSAGE
-  -----------------------------------------------------------------
-  Usage: $0 -m <type>
+Options:
+  -m <type> : 監視対象リソースを指定（cpu または mem）
 
-     Options:
-       -m type      : Specify resource type to monitor (cpu or mem)
-
-  Example:
-     $0 -m cpu
-     $0 -m mem
-  -----------------------------------------------------------------
-EOUSAGE
-
-  exit ${JOB_ER}
+Example:
+  bash resourceAlert.sh -m cpu
+  bash resourceAlert.sh -m mem
+--------------------------------------
+EOF
 }
 
 # ------------------------------------------------------------------
