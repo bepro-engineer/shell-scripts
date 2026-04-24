@@ -225,6 +225,7 @@ logOut "DEBUG" "Execution Time   : ${exec_time}"
 if [ "$usage_val_int" -ge "$threshold" ]; then
     echo "${usage_val_int}% $exec_time" >> "$record_file"
     logOut "WARN" "Usage exceeded: ${usage_val_int}%"
+    rc="${JOB_WR}"
 else
     if [ -s "$record_file" ]; then
         > "$record_file"
