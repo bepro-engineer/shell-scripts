@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 # スクリプト名　：resource_alert.sh
 # 概要　　　　：CPUまたはメモリ使用率を監視し、しきい値超過を通知
@@ -11,8 +11,8 @@
 #   使用率の取得には `top`（CPU）および `free`（MEM）コマンドを使用します。
 #   ログは logSystem 関数を介して user.warn / user.err として一元出力されます。
 #
-# 使用方法　　：sh resource_alert.sh -m cpu
-# 　　　　　　：sh resource_alert.sh -m mem
+# 使用方法　　：bash resource_alert.sh -m cpu
+# 　　　　　　：bash resource_alert.sh -m mem
 #
 # 依存関係　　：logger.shrc / utils.shrc / cpu_threshold.conf / mem_threshold.conf
 #
@@ -31,8 +31,8 @@
 # ------------------------------------------------------------------
 # 初期処理
 # ------------------------------------------------------------------
-. "$(dirname "$0")/../com/utils.shrc"
 . "$(dirname "$0")/../com/logger.shrc"
+. "$(dirname "$0")/../com/utils.shrc"
 setLANG utf-8
 runAs root "$@"
 
