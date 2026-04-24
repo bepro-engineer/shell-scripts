@@ -54,11 +54,20 @@ scope="func"
 # 使用箇所　：引数パース後のチェック
 # ------------------------------------------------------------------
 usage() {
-    echo "Usage: $0 -f <source_dir> -t <target_dir> -m <0|1>"
-    echo "  -d source directory"
-    echo "  -t destination directory"
-    echo "  -m mode: 0 = copy, 1 = move"
-    exit ${JOB_ER}
+    cat >&2 <<'EOF'
+--------------------------------------
+  Usage:
+    sh dirTransfer.sh -d <source_dir> -t <target_dir> -m <mode>
+
+  Options:
+    -d source_dir : 転送元ディレクトリ
+    -t target_dir : 転送先のベースディレクトリ
+    -m mode       : 0=copy, 1=move
+
+  Example:
+    sh dirTransfer.sh -d /path/srcDir -t /path/targetBaseDir -m 0
+--------------------------------------
+EOF
 }
 
 # ------------------------------------------------------------------
