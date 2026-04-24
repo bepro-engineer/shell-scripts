@@ -135,13 +135,14 @@ parseArgs "$@"
 startLog
 logOut "INFO" "Args: -m $type"
 
+trap "terminate" HUP INT QUIT TERM
+
 if acquireLock; then
     logOut "INFO" "Lock acquired"
 else
     abort "Lock acquisition failed."
 fi
 
-trap "terminate" 0 1 2 3 15
 loadThreshold
 
 # ------------------------------------------------------------------
