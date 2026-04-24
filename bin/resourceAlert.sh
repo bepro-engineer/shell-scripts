@@ -113,7 +113,8 @@ parseArgs() {
                 type="$OPTARG"
                 ;;
             *)
-                usage; exit ${JOB_ER} 
+                usage
+                exitLog "${JOB_ER}"
                 ;;
         esac
     done
@@ -122,6 +123,7 @@ parseArgs() {
     if [ -z "$type" ] || ! echo "$type" | grep -qE '^(cpu|mem)$'; then
         logOut "ERROR" "Invalid or missing -m argument."
         usage
+        exitLog "${JOB_ER}"
     fi
 }
 
