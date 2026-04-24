@@ -157,7 +157,7 @@ logOut "INFO" "Starting rsync to temporary directory: $tmp_dir"
 rsync --checksum --delete -av "$src_base/" "$tmp_dir/"
 if [ $? -ne 0 ]; then
     logOut "ERROR" "rsync failed."
-    exit ${JOB_ER}
+    exitLog ${JOB_ER}
 fi
 
 if [ -d "$dst_base" ]; then
