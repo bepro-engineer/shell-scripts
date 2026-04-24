@@ -32,6 +32,12 @@ Shellスクリプト群の作成・整理・見直しを行う。
 - ロック取得前に trap を設定する
 - 終了コードは `JOB_OK` `JOB_WR` `JOB_ER` で管理する
 - 新規作成時は `templates/basicTemplate.sh` を雛形として使用する
+- 実行ファイル系 Shell Script の shebang は必ず `#!/bin/bash` を使用する
+- `#!/bin/sh` は使用しない
+- 実行ファイル系 Shell Script では、前処理で必ず `startLog` を呼び出す
+- `startLog` は引数解析完了後、主処理開始前に1回だけ呼び出す
+- `startLog` を呼び出さずに主処理へ入らない
+-
 
 ### scope ルール
 
