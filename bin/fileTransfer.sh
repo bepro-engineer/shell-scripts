@@ -26,8 +26,8 @@
 # 1.0  PR-0001    2025/07/30 Bepro       新規作成
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 # 共通クラスの読み込み
-. "$(dirname "$0")/../com/utils.shrc"
 . "$(dirname "$0")/../com/logger.shrc"
+. "$(dirname "$0")/../com/utils.shrc"
 setLANG     utf-8
 runAs root "$@"
 
