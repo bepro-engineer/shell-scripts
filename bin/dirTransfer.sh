@@ -73,7 +73,7 @@ EOF
 }
 
 # ------------------------------------------------------------------
-# checkArgs
+# 関数名　　：checkArgs
 # 概要　　　：引数の妥当性を検証
 # 説明　　　：
 #   ディレクトリ存在確認、ワイルドカード排除、親子関係の検出など
@@ -114,7 +114,7 @@ checkArgs() {
 
     if [ -z "$dst_chk" ] || [ "$2" != "$dst_chk" ] || [ "${2%/}" = "$src_parent" ]; then
         logOut "ERROR" "Invalid parent-child directory relationship."
-        exit ${JOB_ER}
+        exitLog ${JOB_ER}
     fi
 }
 
@@ -132,13 +132,16 @@ while getopts d:t:m: opt; do
         d) src_dir="$OPTARG" ;;
         t) dst_dir="$OPTARG" ;;
         m) mode="$OPTARG" ;;
-        *) usage ;;
+        *) usage
+           exitLog ${JOB_ER}
+         ;;
     esac
 done
 
 if [ "$OPTIND" -eq 1 ]; then
     logOut "ERROR" "No arguments provided."
     usage
+    exitLog ${JOB_ER}
 fi
 
 logOut "DEBUG" "src=$src_dir, dst=$dst_dir, mode=$mode"
