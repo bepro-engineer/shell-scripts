@@ -40,6 +40,8 @@ readonly JOB_OK=0
 readonly JOB_WR=1
 readonly JOB_ER=2
 
+rc="${JOB_ER}"
+
 host_id=$(hostname -s)
 exec_time=$(date "+%Y-%m-%d %H:%M:%S")
 
@@ -229,6 +231,7 @@ else
         logOut "INFO" "Reset alert history: $record_file"
     fi
     logOut "DEBUG" "Usage within normal range."
+    rc="${JOB_OK}"
 fi
 
 # 超過カウント取得
@@ -243,9 +246,21 @@ logOut "INFO" "Exceed count: $count_exceed"
 # 致命的判定とログ出力（対象別）
 if [ "$count_exceed" -ge "$threshold_count" ]; then
     if [ "$type" = "cpu" ]; then
-        [ "$usage_val_int" -ge "$critical_limit" ] && logSystem "21001" || logSystem "11001"
+        if [ "$usage_val_int" -ge "$critical_limit" ]; then
+            logSystem "21001"
+            rc="${JOB_ER}"
+        else
+            logSystem "11001"
+            rc="${JOB_WR}"
+        fi
     else
-        [ "$usage_val_int" -ge "$critical_limit" ] && logSystem "21002" || logSystem "11002"
+        if [ "$usage_val_int" -ge "$critical_limit" ]; then
+            logSystem "21002"
+            rc="${JOB_ER}"
+        else
+            logSystem "11002"
+            rc="${JOB_WR}"
+        fi
     fi
 fi
 
@@ -253,4 +268,4 @@ fi
 # post-process（終了処理）
 # ------------------------------------------------------------------
 scope="post"
-exitLog ${JOB_OK}
+exitLog "${rc}"
