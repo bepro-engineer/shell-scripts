@@ -42,6 +42,7 @@ runAs root "$@"
 scope="var"
 
 readonly JOB_OK=0
+readonly JOB_WR=1
 readonly JOB_ER=2
 
 host_id=$(hostname -s)
