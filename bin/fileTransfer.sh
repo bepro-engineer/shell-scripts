@@ -1,7 +1,6 @@
 #!/bin/bash
-# fileTransfer.sh
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
-# スクリプト名：fileTransfer.sh
+# スクリプト名　：fileTransfer.sh
 # 概要　　　　：ファイル送受信の状態管理付き転送処理
 # 説明　　　　：
 #   指定されたファイルを送信側・受信側で管理する仕組みを一体化し、
@@ -154,7 +153,9 @@ while getopts "m:f:t:" opt; do
         m) mode="$OPTARG" ;;
         f) src_fp="$OPTARG" ;;
         t) dst_dir="$OPTARG" ;;
-        *) usage ;;
+        *) usage
+           exitLog ${JOB_ER} 
+           ;;
     esac
 done
 
@@ -162,17 +163,20 @@ done
 if [ "$OPTIND" -eq 1 ]; then
     logOut "ERROR" "No arguments provided."
     usage
+    exitLog ${JOB_ER}
 fi
 
 if [ -z "$mode" ] || [ -z "$src_fp" ] || [ -z "$dst_dir" ]; then
     logOut "ERROR" "Missing required arguments."
     usage
+    exitLog ${JOB_ER}
 fi
 
 # モード値の妥当性チェック
 if [ "$mode" != "send" ] && [ "$mode" != "recv" ]; then
     logOut "ERROR" "Invalid mode specified: [$mode]"
     usage
+    exitLog ${JOB_ER}
 fi
 
 # ------------------------------------------------------------------
