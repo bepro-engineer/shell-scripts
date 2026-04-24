@@ -74,7 +74,7 @@ terminate() {
 # 使用箇所　：送信・受信処理判定時
 # ------------------------------------------------------------------
 getFileStatus() {
-    status="UNEXPECTED"
+    local status="UNEXPECTED"
     [ ! -f "$1" ] && [ ! -f "$1.end" ] && [ ! -f "$1.fin" ] && status="INITIAL"
     [   -f "$1" ] && [ ! -f "$1.end" ] && [ ! -f "$1.fin" ] && status="LOADING"
     [   -f "$1" ] && [   -f "$1.end" ] && [ ! -f "$1.fin" ] && status="LOADED"
