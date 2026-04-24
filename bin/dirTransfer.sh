@@ -85,26 +85,27 @@ checkArgs() {
     if [ $# -lt 3 ]; then
         logOut "ERROR" "Insufficient arguments."
         usage
+        exitLog ${JOB_ER}
     fi
 
     if echo "$1" | grep -q '[*?]' || echo "$2" | grep -q '[*?]'; then
         logOut "ERROR" "Wildcard characters are not allowed in path."
-        exit ${JOB_ER}
+        exitLog ${JOB_ER}
     fi
 
     if [ ! -d "$1" ]; then
         logOut "ERROR" "Source directory does not exist: $1"
-        exit ${JOB_ER}
+        exitLog ${JOB_ER}
     fi
 
     if [ ! -d "$2" ]; then
         logOut "ERROR" "Target directory does not exist: $2"
-        exit ${JOB_ER}
+        exitLog ${JOB_ER}
     fi
 
     if echo "$3" | grep -q '[^01]'; then
         logOut "ERROR" "Mode must be 0 (copy) or 1 (move): $3"
-        exit ${JOB_ER}
+        exitLog ${JOB_ER}
     fi
 
     src_tmp="${1%/}"
