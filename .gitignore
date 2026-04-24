@@ -4,5 +4,6 @@ package.json
 package-lock.json
 src
 tsconfig.json
-
+rep/
+tmp/
 .task/

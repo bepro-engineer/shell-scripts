@@ -36,7 +36,7 @@ declare -A LOG_LEVEL_PRIORITY=(
 # ------------------------------------------------------------
 DEFAULT_LOG_MODE="CONSOLE"  # ログの出力モード (FILE, CONSOLE9, SYSLOG)
 
-BASE_PATH=${BASE_PATH:-"//home/bepro/projects/scripts/"}
+BASE_PATH=${BASE_PATH:-"/home/bepro/projects/shell-scripts"}
 # shellcheck disable=SC2034
 BIN_PATH=${BASE_PATH}/bin
 # shellcheck disable=SC2034
