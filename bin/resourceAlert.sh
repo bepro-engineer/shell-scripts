@@ -233,13 +233,10 @@ fi
 
 # 超過カウント取得
 count_exceed=$(wc -l < "$record_file" | tr -d ' ')
-# 超過カウント取得
-count_exceed=$(wc -l < "$record_file" | tr -d ' ')
 
 logOut "DEBUG" "threshold_count=$threshold_count"
 logOut "DEBUG" "count_exceed=$count_exceed"
-logOut "DEBUG" "record_file content:"
-cat "$record_file" >&2
+logOut "DEBUG" "record_file content: $(cat "$record_file")"
 
 logOut "INFO" "Exceed count: $count_exceed"
 
