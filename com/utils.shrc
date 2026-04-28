@@ -1,17 +1,15 @@
-# Common Utilities resource file
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+# スクリプト名　：utils.shrc
+# 概要　　　　：共通機能を提供する共通リソース
+# 説明　　　　：
+#   各種スクリプトより source して使用する共通ユーティリティ関数を提供する。
+#   ロック制御・文字列操作・プロセス管理等の汎用関数を定義する。
 #
-# utils.sh ver.1.0.0 2025.01.24
+# 引数　　　　：なし（source して使用する）
+# 戻り値　　　：なし
+# 使用箇所　　：全実行スクリプトで source する
 #
-# Usage:
-#     Utils.shrc
-#
-# Description:
-#     各種スクリプトより呼び出される共通機能を提供する。
-#
-# 設計書
-#     none
-#
+# 設計書　　　：なし
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 # ＜変更履歴＞
 # Ver. 変更管理No. 日付        更新者       変更内容
@@ -19,19 +17,17 @@
 # 1.1  〇〇〇〇〇  2025/07/29  Bepro       CPU使用率取得メソッド追加
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 
-# --------------------------------------------------
-# Release the acquired lock
-# --------------------------------------------------
-# Purpose:
-#   Removes the lock file to allow other instances to run.
-# Arguments:
-#   None
-# Returns:
-#   None
-# Notes:
-#   - This function should be called before exiting the script.
-#   - It verifies the lock file exists before removing.
-# --------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：releaseLock
+# 概要　　　：取得済みロックを解放する
+# 説明　　　：
+#   LOCK_FILE が設定されており、かつ自プロセスが所有している場合に
+#   ロックファイルを削除する。他プロセス所有のロックは削除しない。
+#
+# 引数　　　：なし
+# 戻り値　　：なし
+# 使用箇所　：terminate / スクリプト終了前
+# ------------------------------------------------------------------
 releaseLock() {
   if [ -n "$LOCK_FILE" ]; then
     local locker
@@ -47,21 +43,18 @@ releaseLock() {
   fi
 }
 
-# --------------------------------------------------
-# Acquire process lock using a lock file
-# --------------------------------------------------
-# Purpose:
-#   Prevent multiple instances of the script from running simultaneously.
-# Arguments:
-#   None
-# Returns:
-#   0: Success (lock acquired)
-#   !0: Failure (another instance is already running)
-# Notes:
-#   - Uses a lock file instead of a directory.
-#   - Relies on `flock` for safe locking.
-#   - Writes the process ID to the lock file.
-# --------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：acquireLock
+# 概要　　　：プロセスロックを取得する
+# 説明　　　：
+#   flock を使用してロックファイルによる排他制御を行う。
+#   ロック取得成功時はプロセスIDをロックファイルに書き込む。
+#   ロック取得失敗時は別インスタンスが起動中とみなし 1 を返す。
+#
+# 引数　　　：なし
+# 戻り値　　：0=成功（ロック取得）, 1=失敗（他インスタンス起動中）
+# 使用箇所　：pre-process
+# ------------------------------------------------------------------
 acquireLock() {
   LOCK_FILE="${TMP_PATH}/${SCRIPT_NAME%.*}.lock"
   exec 200>"$LOCK_FILE"  # File descriptor 200 をロックファイルに関連付け
@@ -78,23 +71,17 @@ acquireLock() {
   fi
 }
 
-# --------------------------------------------------
-# Set LANG environment variable to UTF-8 encoding
-# --------------------------------------------------
-# Purpose:
-#   Configures the LANG environment variable for UTF-8 encoding
-#   based on the operating system. This ensures compatibility
-#   with applications and scripts requiring UTF-8.
-# Arguments:
-#   None
-# Returns:
-#   None
-# Notes:
-#   - For AIX: LANG is set to "JA_JP"
-#   - For Linux/FreeBSD: LANG is set to "ja_JP.UTF-8"
-#   - For unsupported OS: LANG defaults to "C"
-#   - Ensure the specified locale is installed on the system.
-# --------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：setUTF8
+# 概要　　　：LANG を UTF-8 エンコーディングに設定する
+# 説明　　　：
+#   OS に応じて UTF-8 の LANG 値を選択して setLANG を呼び出す。
+#   AIX=JA_JP, Linux/FreeBSD=ja_JP.UTF-8, その他=C
+#
+# 引数　　　：なし
+# 戻り値　　：なし
+# 使用箇所　：スクリプト初期化時
+# ------------------------------------------------------------------
 setUTF8() {
   local lang_value
 
@@ -107,23 +94,17 @@ setUTF8() {
   setLANG "$lang_value"
 }
 
-# --------------------------------------------------
-# Set LANG environment variable to SJIS encoding
-# --------------------------------------------------
-# Purpose:
-#   Configures the LANG environment variable for SJIS encoding
-#   based on the operating system. This ensures compatibility
-#   with software or scripts requiring SJIS encoding.
-# Arguments:
-#   None
-# Returns:
-#   None
-# Notes:
-#   - For AIX: LANG is set to "Ja_JP"
-#   - For Linux: LANG is set to "ja_JP.sjis"
-#   - For FreeBSD: LANG is set to "ja_JP.SJIS"
-#   - For unsupported OS: LANG defaults to "C"
-# --------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：setSJIS
+# 概要　　　：LANG を SJIS エンコーディングに設定する
+# 説明　　　：
+#   OS に応じて SJIS の LANG 値を選択して setLANG を呼び出す。
+#   AIX=Ja_JP, Linux=ja_JP.sjis, FreeBSD=ja_JP.SJIS, その他=C
+#
+# 引数　　　：なし
+# 戻り値　　：なし
+# 使用箇所　：スクリプト初期化時
+# ------------------------------------------------------------------
 setSJIS() {
   local lang_value
 
@@ -137,41 +118,35 @@ setSJIS() {
   setLANG "$lang_value"
 }
 
-# --------------------------------------------------
-# Set LANG
-# --------------------------------------------------
-# Purpose:
-#   Sets the LANG environment variable to the specified value.
-# Arguments:
-#   $1: LANG value to set (default: C)
-# Returns:
-#   None
-# Notes:
-#   - If no value is specified, LANG defaults to "C".
-#   - Logs the LANG setting.
-# --------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：setLANG
+# 概要　　　：LANG 環境変数を設定する
+# 説明　　　：
+#   指定された値を LANG に設定して export する。
+#   引数省略時は "C" を設定する。
+#
+# 引数　　　：$1 設定する LANG 値（省略時は C）
+# 戻り値　　：なし
+# 使用箇所　：setUTF8 / setSJIS
+# ------------------------------------------------------------------
 setLANG() {
   LANG="${1:-C}"
   export LANG
   logOut "INFO" "LANG has been set to [$LANG]"
 }
 
-# --------------------------------------------------
-# Ensure the script runs as a specific user
-# --------------------------------------------------
-# Purpose:
-#   Ensures the script is executed as a specific user.
-#   If the current user is not the specified user, the script
-#   switches to the target user and re-executes itself.
-# Arguments:
-#   param1: Target user (default: root)
-#   param2-: Command line arguments to pass to the script
-# Returns:
-#   None (the script exits upon switching users or continues execution)
-# Notes:
-#   - Uses `sudo` to switch users instead of `su`.
-#   - If the specified user does not exist, the script aborts.
-# --------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：runAs
+# 概要　　　：指定ユーザーでスクリプトを再実行する
+# 説明　　　：
+#   現在の実行ユーザーが指定ユーザーと異なる場合、sudo を使用して
+#   指定ユーザーで自スクリプトを再実行する。
+#   指定ユーザーが存在しない場合は abort で終了する。
+#
+# 引数　　　：$1 対象ユーザー（省略時は root）、$2- スクリプト引数
+# 戻り値　　：なし（ユーザー切り替え時は exec で継続）
+# 使用箇所　：スクリプト初期化時（pre-process 前）
+# ------------------------------------------------------------------
 runAs() {
   local target_user=${1:-"root"}  # デフォルトは root
   shift
@@ -199,15 +174,15 @@ runAs() {
 }
 
 # ------------------------------------------------------------------
-# Function Name : getFileHash
-# Overview      : Retrieve the SHA-256 hash of a given file
-# Description   :
-#   Computes and returns the SHA-256 hash of the specified file.
-#   Validates the file path and existence before hashing.
+# 関数名　　：getFileHash
+# 概要　　　：指定ファイルの SHA-256 ハッシュ値を返す
+# 説明　　　：
+#   指定されたファイルの SHA-256 ハッシュ値を算出して stdout に返す。
+#   sha256sum または shasum コマンドを使用し、どちらもない場合はエラー。
 #
-# Arguments     : $1 = Path to the target file (absolute or relative)
-# Return Value  : SHA-256 hash string (64-character hex, stdout)
-#                 Returns 1 on error
+# 引数　　　：$1 対象ファイルのパス
+# 戻り値　　：SHA-256 ハッシュ文字列（stdout）、エラー時は 1
+# 使用箇所　：fileTransfer.sh
 # ------------------------------------------------------------------
 getFileHash() {
   local file="$1"
@@ -232,20 +207,17 @@ getFileHash() {
   fi
 }
 
-# --------------------------------------------------
-# Ensure the script runs as root
-# --------------------------------------------------
-# Purpose:
-#   Ensures the script is executed with root privileges.
-#   If not, it either aborts with an error or re-executes with sudo.
-# Arguments:
-#   None
-# Returns:
-#   None (exits or re-executes the script as root)
-# Notes:
-#   - Automatically retries with 'sudo' if not root.
-#   - This enhances usability while maintaining security.
-# --------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：runAsRoot
+# 概要　　　：root 権限でスクリプトを再実行する
+# 説明　　　：
+#   現在のユーザーが root でない場合、sudo を使用して
+#   自スクリプトを root で再実行する。
+#
+# 引数　　　：なし
+# 戻り値　　：なし（root でない場合は exec で再実行）
+# 使用箇所　：スクリプト初期化時（pre-process 前）
+# ------------------------------------------------------------------
 runAsRoot() {
   local uid
   uid=$(id -u)
@@ -255,48 +227,41 @@ runAsRoot() {
   fi
 }
 
-# --------------------------------------------------
-# Abort script execution with an error message.
-# --------------------------------------------------
-# Purpose:
-#   Logs an abort message and terminates the script with exit code 1.
-# Arguments:
-#   param1-: Error message to log.
-#            Example: "Critical failure in configuration loading."
-# Returns:
-#   None (terminates script with exit code 1)
-# Notes:
-#   - All output is sent to standard error (stderr).
-#   - Includes stack trace information for easier debugging.
-# --------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：abort
+# 概要　　　：エラーメッセージを出力してスクリプトを異常終了する
+# 説明　　　：
+#   呼び出し元情報とともにエラーメッセージを stderr に出力し、
+#   スクリプトを終了する。trap からは呼ばれない緊急終了用。
+#
+# 引数　　　：$* エラーメッセージ
+# 戻り値　　：なし（exit 2 で終了）
+# 使用箇所　：runAs / runAsRoot / 初期化処理など
+# ------------------------------------------------------------------
 abort() {
   local caller_info log_msg
   caller_info=$(caller 0 2>/dev/null)  # どこで呼ばれたか取得
-  
+
   log_msg="ABORT [$caller_info]: $*"  # `formatLog` の代わりに直接メッセージ生成
   echo "$log_msg" 1>&2  # stderr にログ出力
 
   sync  # ログを確実にディスクに書き込む
-  exit 1  # スクリプトを異常終了
+  exit 2  # スクリプトを異常終了
 }
 
 
-# ------------------------------------------------------------
-# Check if a process with the given name is running.
-# ------------------------------------------------------------
-# Purpose:
-#   Determines whether a process matching the given keyword is currently active.
-# Arguments:
-#   $1: The keyword to search for in the process list (e.g. "chronyd")
-# Returns:
-#   0: The process is running
-#   1: The process is not running
-# Notes:
-#   - This function uses `ps` and `grep` to search for the process.
-#   - It excludes lines that match `grep` itself and the current script name.
-#   - Ensure $SCRIPT_NAME is defined in the calling context.
-#   - May overmatch if $1 is a partial string (e.g. "chrony" matches "chronyc").
-# ------------------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：isProcessAlive
+# 概要　　　：指定プロセスが起動中か確認する
+# 説明　　　：
+#   ps コマンドで指定キーワードに一致するプロセスを検索し、
+#   存在すれば 0、存在しなければ 1 を返す。
+#   grep 自身と SCRIPT_NAME は除外する。
+#
+# 引数　　　：$1 プロセス名またはキーワード
+# 戻り値　　：0=起動中, 1=未起動
+# 使用箇所　：プロセス監視処理
+# ------------------------------------------------------------------
 isProcessAlive() {
   local cnt
   cnt=$(ps auxw | grep -F "$1" | grep -v grep | grep -v "$SCRIPT_NAME" | wc -l)
@@ -307,19 +272,17 @@ isProcessAlive() {
   return 0
 }
 
-# ------------------------------------------------------------
-# Count the number of running processes matching a pattern.
-# ------------------------------------------------------------
-# Purpose:
-#   Counts the number of running processes that match the specified pattern.
-# Arguments:
-#   $1: Pattern to search for (e.g., process name or part of a command line)
-# Returns:
-#   Process count (printed to stdout)
-# Notes:
-#   - Excludes the current script and the `grep` commands themselves from the count.
-#   - Ensure that the pattern does not unintentionally match unrelated processes.
-# ------------------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：getProcessCount
+# 概要　　　：指定パターンに一致するプロセス数を返す
+# 説明　　　：
+#   ps コマンドで指定パターンに一致するプロセス数を数えて stdout に返す。
+#   grep 自身と SCRIPT_NAME は除外する。パターン未指定時は 0 を返す。
+#
+# 引数　　　：$1 プロセス名またはパターン
+# 戻り値　　：プロセス数（stdout）
+# 使用箇所　：プロセス監視処理
+# ------------------------------------------------------------------
 getProcessCount() {
   local pattern="$1"
 
@@ -336,19 +299,17 @@ getProcessCount() {
   echo "$count"
 }
 
-# --------------------------------------------------
-# Check if the value contains only alphanumeric characters.
-# --------------------------------------------------
-# Purpose:
-#   Determines whether a given value consists solely of alphanumeric characters.
-# Arguments:
-#   $1: Value to check
-# Returns:
-#   0: Alphanumeric  1: Not Alphanumeric
-# Notes:
-#   - Uses `sed` to remove non-alphanumeric characters and compares with original value.
-#   - Does not rely on external tools other than `sed` for matching.
-# --------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：isAlphaNum
+# 概要　　　：値が英数字のみで構成されているか確認する
+# 説明　　　：
+#   sed で非英数字を除去した結果と元の値を比較する。
+#   一致すれば英数字のみ、一致しなければ非英数字が含まれる。
+#
+# 引数　　　：$1 確認する値
+# 戻り値　　：0=英数字のみ, 1=非英数字を含む
+# 使用箇所　：入力値検証処理
+# ------------------------------------------------------------------
 isAlphaNum() {
   local val
   val="$(echo "$1" | sed -e 's/[^[:alnum:]]//g')"
@@ -359,42 +320,32 @@ isAlphaNum() {
   return 0  # Alphanumeric
 }
 
-# ------------------------------------------------------------
-# Check if the given value is numeric.
-# ------------------------------------------------------------
-# Purpose:
-#   Determines whether the provided value is a valid numeric value.
-# Arguments:
-#   $1: The value to check (string or number)
-# Returns:
-#   0: The value is numeric (integer)
-#   1: The value is not numeric
-# Notes:
-#   - A numeric value is defined as an integer (positive or negative).
-#   - This function does not handle floating-point numbers or other non-integer values.
-#   - Leading or trailing spaces are not allowed.
-#   - Uses `expr` to check if the value is a valid integer.
-# ------------------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：isNumeric
+# 概要　　　：値が整数かどうか確認する
+# 説明　　　：
+#   正規表現により、指定値が符号付き整数かどうかを判定する。
+#   小数・先頭後続スペースは非数値として扱う。
+#
+# 引数　　　：$1 確認する値
+# 戻り値　　：0=整数, 1=非整数
+# 使用箇所　：数値入力検証処理
+# ------------------------------------------------------------------
 isNumeric() {
   [[ "$1" =~ ^-?[0-9]+$ ]]
 }
 
-# ------------------------------------------------------------
-# Check if a specified port is in LISTEN state.
-# ------------------------------------------------------------
-# Purpose:
-#   Verifies whether the specified port is actively listening
-#   on the system.
-# Arguments:
-#   $1: Port number (e.g., 80, 443)
-# Returns:
-#   0: The port is listening
-#   1: The port is not listening
-# Notes:
-#   - This function uses the `netstat` command to check the port state.
-#   - Ensure that the `netstat` command is available in your environment.
-#   - Invalid or empty input will cause the function to return 1.
-# ------------------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：isPortAlive
+# 概要　　　：指定ポートが LISTEN 状態か確認する
+# 説明　　　：
+#   ss または netstat を使用して指定ポートが LISTEN 状態かどうかを確認する。
+#   不正なポート番号は 2 を返す。
+#
+# 引数　　　：$1 ポート番号
+# 戻り値　　：0=LISTEN中, 1=未LISTEN, 2=入力エラーまたはコマンド不存在
+# 使用箇所　：ポート監視処理
+# ------------------------------------------------------------------
 isPortAlive() {
   local port="$1"
 
@@ -421,25 +372,17 @@ isPortAlive() {
   return 0  # Port is listening
 }
 
-# ------------------------------------------------------------
-# Check the process count against a specified range.
-# ------------------------------------------------------------
-# Purpose:
-#   Verifies whether the number of running processes for the
-#   specified process name is within the given range.
-# Arguments:
-#   $1: process_name (string) - The name of the process to check.
-#   $2: min_count (integer) - Minimum allowed process count.
-#   $3: max_count (integer) - Maximum allowed process count.
-# Returns:
-#   0: Process count is within range.
-#   1: Process count is below the minimum.
-#   2: Process count exceeds the maximum.
-#   3: Invalid argument (e.g., min_count > max_count or invalid process count).
-# Notes:
-#   - For single process requirements, set min_count and max_count to 1.
-#   - Logs an error message if the process count is invalid or if the arguments are incorrect.
-# ------------------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：checkProcessCount
+# 概要　　　：プロセス数が指定範囲内か確認する
+# 説明　　　：
+#   指定プロセス名の起動数を取得し、最小値・最大値の範囲内か確認する。
+#   min_count > max_count の場合は 3（引数不正）を返す。
+#
+# 引数　　　：$1 プロセス名、$2 最小数、$3 最大数
+# 戻り値　　：0=範囲内, 1=最小未満, 2=最大超過, 3=引数不正
+# 使用箇所　：プロセス監視処理
+# ------------------------------------------------------------------
 checkProcessCount() {
     local process_name="$1"
     local min_count="$2"
@@ -470,61 +413,61 @@ checkProcessCount() {
     fi
 }
 
-# ------------------------------------------------------------
-# Get the current date in a specific format.
-# ------------------------------------------------------------
-# Purpose:
-#   Returns the current date in the format YYYY-MM-DD.
-# Arguments:
-#   None
-# Returns:
-#   Current date (printed to stdout).
-# ------------------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：getCurrentDate
+# 概要　　　：現在日付を YYYY-MM-DD 形式で返す
+# 説明　　　：
+#   date コマンドで現在日付を YYYY-MM-DD 形式で取得して stdout に返す。
+#
+# 引数　　　：なし
+# 戻り値　　：現在日付文字列（stdout）
+# 使用箇所　：日付処理全般
+# ------------------------------------------------------------------
 getCurrentDate() {
     date +"%Y-%m-%d" | tr -d '\r'
 }
 
-# ------------------------------------------------------------
-# Get the current timestamp in a specific format.
-# ------------------------------------------------------------
-# Purpose:
-#   Returns the current date and time in the format YYYY-MM-DD HH:MM:SS.
-# Arguments:
-#   None
-# Returns:
-#   Current timestamp (printed to stdout).
-# ------------------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：getCurrentTimestamp
+# 概要　　　：現在日時を YYYY-MM-DD_HH-MM-SS 形式で返す
+# 説明　　　：
+#   date コマンドで現在日時を YYYY-MM-DD_HH-MM-SS 形式で取得して stdout に返す。
+#
+# 引数　　　：なし
+# 戻り値　　：現在日時文字列（stdout）
+# 使用箇所　：タイムスタンプ付きファイル名生成など
+# ------------------------------------------------------------------
 getCurrentTimestamp() {
   date +"%Y-%m-%d_%H-%M-%S"
 }
 
-# ------------------------------------------------------------
-# Format a given timestamp or current time.
-# ------------------------------------------------------------
-# Purpose:
-#   Converts a given timestamp into a specified format.
-# Arguments:
-#   $1: Format (e.g., "%Y-%m-%d", "%H:%M:%S").
-# Returns:
-#   Formatted timestamp (printed to stdout).
-# ------------------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：formatDate
+# 概要　　　：指定フォーマットで現在日時を返す
+# 説明　　　：
+#   引数で指定したフォーマットで現在日時を取得して stdout に返す。
+#   フォーマット省略時は "%Y-%m-%d" を使用する。
+#
+# 引数　　　：$1 フォーマット文字列（省略時は %Y-%m-%d）
+# 戻り値　　：フォーマット済み日時文字列（stdout）
+# 使用箇所　：日付・日時取得処理
+# ------------------------------------------------------------------
 formatDate() {
   local format="${1:-"%Y-%m-%d"}"
   date +"$format"
 }
 
-# ------------------------------------------------------------
-# Create a backup of a specified file.
-# ------------------------------------------------------------
-# Purpose:
-#   Copies the file to a backup location with a timestamp appended.
-# Arguments:
-#   $1: File to back up.
-# Returns:
-#   None.
-# Notes:
-#   - Logs an error if the file does not exist or cannot be backed up.
-# ------------------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：backupFile
+# 概要　　　：指定ファイルをタイムスタンプ付きでバックアップする
+# 説明　　　：
+#   対象ファイルを同一ディレクトリに _YYYY-MM-DD_HH-MM-SS.bak
+#   形式でコピーする。ファイル不存在時はエラー終了する。
+#
+# 引数　　　：$1 バックアップ対象ファイルパス
+# 戻り値　　：なし（エラー時は 2）
+# 使用箇所　：ファイル更新前のバックアップ処理
+# ------------------------------------------------------------------
 backupFile() {
   local file="$1"
   if [ ! -f "$file" ]; then
@@ -547,19 +490,17 @@ backupFile() {
   fi
 }
 
-# ------------------------------------------------------------
-# Delete files older than a specified number of days.
-# ------------------------------------------------------------
-# Purpose:
-#   Cleans up files in a directory that exceed a retention period.
-# Arguments:
-#   $1: Directory to clean up.
-#   $2: Retention period in days.
-# Returns:
-#   None.
-# Notes:
-#   - Logs the result of the cleanup operation.
-# ------------------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：deleteOldFiles
+# 概要　　　：指定ディレクトリ内の保持期間超過ファイルを削除する
+# 説明　　　：
+#   指定ディレクトリ内で、指定日数より古いファイルを find で検索して削除する。
+#   ディレクトリが存在しない場合はエラー終了する。
+#
+# 引数　　　：$1 対象ディレクトリ、$2 保持日数
+# 戻り値　　：なし（エラー時は 2）
+# 使用箇所　：ログ・一時ファイルのクリーンアップ処理
+# ------------------------------------------------------------------
 deleteOldFiles() {
   local dir="$1"
   local days="$2"
@@ -577,17 +518,17 @@ deleteOldFiles() {
   fi
 }
 
-# ------------------------------------------------------------
-# Check if a host is reachable.
-# ------------------------------------------------------------
-# Purpose:
-#   Verifies whether the specified host is reachable via ping.
-# Arguments:
-#   $1: Hostname or IP address.
-# Returns:
-#   0: Host is reachable.
-#   1: Host is not reachable.
-# ------------------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：isHostAlive
+# 概要　　　：指定ホストに ping で疎通確認する
+# 説明　　　：
+#   ping コマンドで指定ホストへの到達性を確認する。
+#   到達可能であれば 0、不達であれば 1 を返す。
+#
+# 引数　　　：$1 ホスト名または IP アドレス
+# 戻り値　　：0=到達可能, 1=到達不可
+# 使用箇所　：ネットワーク疎通確認処理
+# ------------------------------------------------------------------
 isHostAlive() {
   local host="$1"
   if ping -c 1 -W 1 "$host" >/dev/null 2>&1; then
@@ -598,17 +539,17 @@ isHostAlive() {
   fi
 }
 
-# ------------------------------------------------------------
-# Prompt the user for confirmation.
-# ------------------------------------------------------------
-# Purpose:
-#   Asks the user for confirmation before proceeding with a critical operation.
-# Arguments:
-#   $1: Message to display (e.g., "Are you sure?")
-# Returns:
-#   0: User confirmed.
-#   1: User declined.
-# ------------------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：confirmAction
+# 概要　　　：ユーザーに操作確認を求める
+# 説明　　　：
+#   メッセージを表示してユーザー入力を待ち、
+#   y または yes の入力で 0、それ以外で 1 を返す。
+#
+# 引数　　　：$1 確認メッセージ（省略時は "Are you sure? [y/N]"）
+# 戻り値　　：0=確認済み, 1=キャンセル
+# 使用箇所　：危険操作の実行前確認
+# ------------------------------------------------------------------
 confirmAction() {
   local message="${1:-"Are you sure? [y/N]"}"
   local response
@@ -619,31 +560,31 @@ confirmAction() {
   esac
 }
 
-# ------------------------------------------------------------
-# Check if a command exists in the environment.
-# ------------------------------------------------------------
-# Purpose:
-#   Ensures that a required command is available before executing the script.
-# Arguments:
-#   $1: Command name to check (e.g., "curl").
-# Returns:
-#   0: Command exists.
-#   1: Command does not exist.
-# ------------------------------------------------------------
+# ------------------------------------------------------------------
+# 関数名　　：checkCommandExists
+# 概要　　　：指定コマンドが利用可能か確認する
+# 説明　　　：
+#   command -v を使用して指定コマンドの存在を確認する。
+#   存在すれば 0、存在しなければ 1 を返す。
+#
+# 引数　　　：$1 コマンド名
+# 戻り値　　：0=利用可能, 1=コマンド不存在
+# 使用箇所　：コマンド依存確認処理
+# ------------------------------------------------------------------
 checkCommandExists() {
   command -v "$1" >/dev/null 2>&1  # コマンドが存在するか確認
 }
 
 # ------------------------------------------------------------------
-# Function name : getCpuUtilization
-# Summary       : Get current CPU utilization rate
-# Description   :
-#   Executes the `top` command once to capture current CPU usage.
-#   Calculates (100 - idle%) to derive the active usage percentage.
+# 関数名　　：getCpuUtilization
+# 概要　　　：現在の CPU 使用率を取得する
+# 説明　　　：
+#   top コマンドを1回実行して CPU 使用率を取得する。
+#   idle% を 100 から引いた値を整数（%）として stdout に返す。
 #
-# Arguments     : None
-# Return value  : CPU usage rate as an integer (%)
-# Used in       : cpu_alert.sh
+# 引数　　　：なし
+# 戻り値　　：CPU 使用率（整数 %、stdout）
+# 使用箇所　：resourceAlert.sh
 # ------------------------------------------------------------------
 getCpuUtilization() {
     top -bn1 | grep "Cpu(s)" | \
@@ -651,25 +592,29 @@ getCpuUtilization() {
 }
 
 # ------------------------------------------------------------------
-# Function name : lower
-# Summary       : Convert string to lowercase
-# Arguments     : $1 - Input string
-# Return value  : Lowercase string (via echo)
+# 関数名　　：lower
+# 概要　　　：文字列を小文字に変換する
+# 説明　　　：
+#   tr コマンドを使用して入力文字列の大文字を小文字に変換して stdout に返す。
+#
+# 引数　　　：$1 変換対象文字列
+# 戻り値　　：小文字変換後文字列（stdout）
+# 使用箇所　：文字列処理全般
 # ------------------------------------------------------------------
 lower() {
     echo "$1" | tr '[:upper:]' '[:lower:]'
 }
 
 # ------------------------------------------------------------------
-# Function name : getMemUtilization
-# Summary       : Get current Memory utilization rate
-# Description   :
-#   Executes the `free` command to get memory statistics.
-#   Calculates used memory as: (total - available) / total × 100
+# 関数名　　：getMemUtilization
+# 概要　　　：現在のメモリ使用率を取得する
+# 説明　　　：
+#   free コマンドを使用してメモリ統計を取得する。
+#   (total - available) / total × 100 を整数（%）として stdout に返す。
 #
-# Arguments     : None
-# Return value  : Memory usage rate as an integer (%)
-# Used in       : mem_alert.sh
+# 引数　　　：なし
+# 戻り値　　：メモリ使用率（整数 %、stdout）
+# 使用箇所　：resourceAlert.sh
 # ------------------------------------------------------------------
 getMemUtilization() {
     free | awk '/Mem:/ { printf("%.0f", ( ($2 - $7) / $2 ) * 100 ) }'
@@ -677,11 +622,11 @@ getMemUtilization() {
 
 # ------------------------------------------------------------------
 # 関数名　　：prepareDir
-# 概要　　　：指定された複数ディレクトリの存在を確認し、
-# 　　　　　：存在しなければ親ディレクトリも含めて作成する
+# 概要　　　：指定された複数ディレクトリの存在を確認し、存在しなければ作成する
 # 説明　　　：
-# 　　　　　：引数で渡されたディレクトリを順にチェックし、
-# 　　　　　：存在しなければ mkdir -p で作成する。
+#   引数で渡されたディレクトリを順にチェックし、
+#   存在しなければ mkdir -p で作成する。
+#
 # 引数　　　：$* 複数のディレクトリパス
 # 戻り値　　：なし
 # 使用箇所　：ディレクトリ準備が必要な処理の前など

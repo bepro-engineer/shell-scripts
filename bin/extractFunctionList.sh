@@ -1,25 +1,25 @@
 #!/bin/bash
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+# スクリプト名　：extractFunctionList.sh
+# 概要　　　　：Shell スクリプトから関数名一覧を抽出する
+# 説明　　　　：
+#   指定された .sh / .shrc ファイルから関数定義行を抽出し、
+#   関数名を1行ずつ標準出力に返す。
+#   関数が0件の場合は警告終了する。
 #
-# Usage:
-#    extractFunctionList.sh <file_path>
+# 引数　　　　：$1 対象ファイルパス
+# 戻り値　　　：0（正常終了）、1（警告）、2（異常終了）
+# 使用箇所　　：Shell スクリプトの関数一覧確認
 #
-# Description:
-#    Extracts function names from a shell script file and outputs them
-#    to stdout, one per line.
-#    Supports .sh and .shrc files.
-#
-# Design documents
-#    None
-#
+# 設計書　　　：なし
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 # ＜変更履歴＞
 # Ver. 変更管理No. 日付        更新者       変更内容
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 
 # shellcheck disable=SC1091
-. "$(dirname "${BASH_SOURCE[0]}")/../com/logger.shrc"
-. "$(dirname "${BASH_SOURCE[0]}")/../com/utils.shrc"
+. "$(dirname "$0")/../com/logger.shrc"
+. "$(dirname "$0")/../com/utils.shrc"
 
 # runAs       root "$@"
 # setLANG     utf-8
@@ -70,16 +70,18 @@ terminate() {
 # 使用箇所　：pre-process
 # ------------------------------------------------------------------
 showUsage() {
-  printf '%s\n' '--------------------------------------' >&2
-  printf 'Usage:\n' >&2
-  printf 'sh extractFunctionList.sh <file_path>\n' >&2
-  printf '\n' >&2
-  printf 'Options:\n' >&2
-  printf '%s\n' '-h, --help : Usage を表示' >&2
-  printf '\n' >&2
-  printf 'Example:\n' >&2
-  printf 'sh extractFunctionList.sh /path/to/target.sh\n' >&2
-  printf '%s\n' '--------------------------------------' >&2
+  cat >&2 <<'EOF'
+--------------------------------------
+Usage:
+  bash extractFunctionList.sh <file_path>
+
+Options:
+  -h, --help : Usage を表示
+
+Example:
+  bash extractFunctionList.sh /path/to/target.sh
+--------------------------------------
+EOF
 }
 
 # ------------------------------------------------------------------

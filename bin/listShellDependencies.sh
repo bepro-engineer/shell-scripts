@@ -1,31 +1,25 @@
 #!/bin/bash
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+# スクリプト名　：listShellDependencies.sh
+# 概要　　　　：Shell スクリプトから source / . による依存ファイル一覧を抽出する
+# 説明　　　　：
+#   指定された .sh / .shrc ファイルから source / . による読み込み行を抽出し、
+#   依存ファイルパスを1行ずつ標準出力に返す。
+#   依存が0件の場合は警告終了する。
 #
-# Usage:
-#    listShellDependencies.sh <file_path>
+# 引数　　　　：$1 対象ファイルパス
+# 戻り値　　　：0（正常終了）、1（警告）、2（異常終了）
+# 使用箇所　　：Shell スクリプトの依存関係確認
 #
-# Options:
-#    -h, --help : Usage を表示
-#
-# Example:
-#    sh listShellDependencies.sh /path/to/target.sh
-#
-# Description:
-#    Extracts files loaded by source or . from a shell script and outputs
-#    them to stdout, one per line.
-#    Supports .sh and .shrc files.
-#
-# Design documents
-#    None
-#
+# 設計書　　　：なし
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 # ＜変更履歴＞
 # Ver. 変更管理No. 日付        更新者       変更内容
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 
 # shellcheck disable=SC1091
-. "$(dirname "${BASH_SOURCE[0]}")/../com/logger.shrc"
-. "$(dirname "${BASH_SOURCE[0]}")/../com/utils.shrc"
+. "$(dirname "$0")/../com/logger.shrc"
+. "$(dirname "$0")/../com/utils.shrc"
 
 # runAs       root "$@"
 # setLANG     utf-8
@@ -76,16 +70,18 @@ terminate() {
 # 使用箇所　：pre-process
 # ------------------------------------------------------------------
 showUsage() {
-  printf '%s\n' '--------------------------------------' >&2
-  printf 'Usage:\n' >&2
-  printf 'sh listShellDependencies.sh <file_path>\n' >&2
-  printf '\n' >&2
-  printf 'Options:\n' >&2
-  printf '%s\n' '-h, --help : Usage を表示' >&2
-  printf '\n' >&2
-  printf 'Example:\n' >&2
-  printf 'sh listShellDependencies.sh /path/to/target.sh\n' >&2
-  printf '%s\n' '--------------------------------------' >&2
+  cat >&2 <<'EOF'
+--------------------------------------
+Usage:
+  bash listShellDependencies.sh <file_path>
+
+Options:
+  -h, --help : Usage を表示
+
+Example:
+  bash listShellDependencies.sh /path/to/target.sh
+--------------------------------------
+EOF
 }
 
 # ------------------------------------------------------------------
@@ -150,7 +146,7 @@ extractDependencies() {
   logOut "DEBUG" "抽出開始"
 
   dep_list=$(grep -E '^[[:blank:]]*(source[[:blank:]]+|\.[[:blank:]]+)' "${target_file}" \
-    | grep -E '^[^$]*$|\$\(dirname "\$\{BASH_SOURCE\[0\]\}"\)' \
+    | grep -E '^[^$]*$|\$\(dirname "\$\{BASH_SOURCE\[0\]\}"\)|\$\(dirname "\$0"\)' \
     | sed 's/^[[:blank:]]*//' \
     | sed 's/^source[[:blank:]]*//' \
     | sed 's/^\.[[:blank:]]*//' \

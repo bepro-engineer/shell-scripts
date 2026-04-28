@@ -1,24 +1,24 @@
 #!/bin/bash
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+# スクリプト名　：countStepLines.sh
+# 概要　　　　：ファイルの実ステップ数を計測する
+# 説明　　　　：
+#   指定されたファイルから空行とコメント行（# 始まり）を除外し、
+#   実ステップ数を計測して標準出力に返す。
 #
-# Usage:
-#    countStepLines.sh <file_path>
+# 引数　　　　：$1 対象ファイルパス
+# 戻り値　　　：0（正常終了）、1（警告）、2（異常終了）
+# 使用箇所　　：Shell スクリプトの規模計測
 #
-# Description:
-#    Counts effective step lines in a file.
-#    Excludes blank lines and comment lines (lines starting with #).
-#
-# Design documents
-#    None
-#
+# 設計書　　　：なし
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 # ＜変更履歴＞
 # Ver. 変更管理No. 日付        更新者       変更内容
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 
 # shellcheck disable=SC1091
-. "$(dirname "${BASH_SOURCE[0]}")/../com/logger.shrc"
-. "$(dirname "${BASH_SOURCE[0]}")/../com/utils.shrc"
+. "$(dirname "$0")/../com/logger.shrc"
+. "$(dirname "$0")/../com/utils.shrc"
 
 # runAs       root "$@"
 # setLANG     utf-8
@@ -69,16 +69,18 @@ terminate() {
 # 使用箇所　：pre-process
 # ------------------------------------------------------------------
 showUsage() {
-  printf '%s\n' '--------------------------------------' >&2
-  printf 'Usage:\n' >&2
-  printf 'sh countStepLines.sh <file_path>\n' >&2
-  printf '\n' >&2
-  printf 'Options:\n' >&2
-  printf '%s\n' '-h, --help : Usage を表示' >&2
-  printf '\n' >&2
-  printf 'Example:\n' >&2
-  printf 'sh countStepLines.sh /path/to/target.sh\n' >&2
-  printf '%s\n' '--------------------------------------' >&2
+  cat >&2 <<'EOF'
+--------------------------------------
+Usage:
+  bash countStepLines.sh <file_path>
+
+Options:
+  -h, --help : Usage を表示
+
+Example:
+  bash countStepLines.sh /path/to/target.sh
+--------------------------------------
+EOF
 }
 
 # ------------------------------------------------------------------

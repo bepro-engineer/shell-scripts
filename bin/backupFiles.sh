@@ -1,24 +1,18 @@
-#!/bin/sh
+#!/bin/bash
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+# スクリプト名　：backupFiles.sh
+# 概要　　　　：指定ディレクトリ配下のファイルをアーカイブとしてバックアップする
+# 説明　　　　：
+#   指定されたファイル・ディレクトリをアーカイブし、除外リストを考慮して圧縮する。
+#   7日以上前のバックアップを自動削除し、異常終了時は trap で後始末を行う。
 #
-# Usage:
-#    bash backupFiles.sh -b <backup_directory>
+# 引数　　　　：
+#   -b <backup_directory> ：バックアップ保存先ディレクトリ
 #
-# Options:
-#    -b backup_directory : バックアップ保存先ディレクトリ
+# 戻り値　　　：0（正常終了）、2（異常終了）
+# 使用箇所　　：定期バックアップ処理
 #
-# Example:
-#    bash backupFiles.sh -b /path/to/backup
-#
-# Description:
-# - 指定されたファイル・ディレクトリをアーカイブ
-# - 除外リストを考慮して圧縮
-# - 7日以上前のバックアップを自動削除
-# - 異常終了時の処理を `trap` で制御
-#
-# 設計書
-#     none
-#
+# 設計書　　　：なし
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 # ＜変更履歴＞
 # Ver. 変更管理No. 日付        更新者       変更内容
@@ -27,8 +21,8 @@
 
 # 共通クラスの読み込み
 # shellcheck disable=SC1091
-. "$(dirname "${BASH_SOURCE[0]}")/../com/logger.shrc"
-. "$(dirname "${BASH_SOURCE[0]}")/../com/utils.shrc"
+. "$(dirname "$0")/../com/logger.shrc"
+. "$(dirname "$0")/../com/utils.shrc"
 
 # ========================================
 # 実行ユーザー確認（root限定）
@@ -208,7 +202,9 @@ cleanOldBackups() {
 # pre-process
 # ----------------------------------------------------------
 scope="pre"
-startLog "backupFiles.sh バックアップ処理開始"
+
+# `trap` 設定（異常終了時に terminate() を呼び出し）
+trap "terminate" HUP INT QUIT TERM
 
 # ========================================
 # 引数の処理
@@ -222,9 +218,7 @@ while getopts "b:" opt; do
 done
 
 checkArg
-
-# `trap` 設定（異常終了時に terminate() を呼び出し）
-trap "terminate" HUP INT QUIT TERM
+startLog "backupFiles.sh バックアップ処理開始"
 
 # ----------------------------------------------------------
 # main-routine

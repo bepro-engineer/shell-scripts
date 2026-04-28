@@ -1,20 +1,21 @@
-#!/bin/sh
+#!/bin/bash
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+# スクリプト名　：compress.sh
+# 概要　　　　：任意のファイル／ディレクトリを zstd 形式で圧縮する
+# 説明　　　　：
+#   圧縮対象ファイルまたはディレクトリを tar で一時ファイルに書き出し、
+#   zstd で圧縮して指定の出力ファイルに保存する。
+#   mode=1 指定時は圧縮完了後に元データを削除する。
 #
-# compress.sh
-# ver.1.3.0  2025.07.25
+# 引数　　　　：
+#   -s <src_path> ：圧縮対象のファイルまたはディレクトリ
+#   -d <dst_file> ：出力先ファイル名（.zst 拡張子を推奨）
+#   -m <mode>     ：0=元データ保持 / 1=元データ削除
 #
-# Usage:
-#     sh compress.sh -s <src_path> -d <dst_file> -m <mode>
+# 戻り値　　　：0（正常終了）、2（異常終了）
+# 使用箇所　　：ファイル圧縮・アーカイブ処理
 #
-# Description:
-#    任意のファイル／ディレクトリをzstd形式で圧縮する汎用スクリプト
-#    - モード: 圧縮後に元データを削除（1）または保持（0）
-#    - ログ出力対応（logger.shrc 準拠）
-#
-#    使用例：
-#        sh compress.sh -f /var/log/hoge.log -t /tmp/hoge.zst -m 1
-#
+# 設計書　　　：なし
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 # ＜変更履歴＞
 # Ver. 変更管理No. 日付        更新者       変更内容
@@ -23,8 +24,8 @@
 # ------------------------------------------------------------------
 # 初期処理
 # ------------------------------------------------------------------
-. "$(dirname "$0")/../com/utils.shrc"
 . "$(dirname "$0")/../com/logger.shrc"
+. "$(dirname "$0")/../com/utils.shrc"
 setLANG     utf-8
 runAs root "$@"
 
@@ -130,18 +131,20 @@ checkArgs() {
 # 使用箇所　：pre-process
 # ------------------------------------------------------------------
 usage() {
-
-  cat <<EOUSAGE
+  cat >&2 <<'EOF'
 --------------------------------------
-Usage: $0 -s <src_path> -d <dst_file> -m <mode>
+Usage:
+  bash compress.sh -s <src_path> -d <dst_file> -m <mode>
 
 Options:
-  -s src_path   : 圧縮対象のファイルまたはディレクトリ（必須）
-  -d dst_file   : 出力先のファイル名（必須・.zst拡張子が推奨）
-  -m mode       : モード（0=保持 ／ 1=削除）
+  -s src_path : 圧縮対象のファイルまたはディレクトリ（必須）
+  -d dst_file : 出力先のファイル名（必須・.zst拡張子が推奨）
+  -m mode     : モード（0=保持 ／ 1=削除）
 
+Example:
+  bash compress.sh -s /path/to/src -d /path/to/output.zst -m 0
 --------------------------------------
-EOUSAGE
+EOF
 }
 
 # ----------------------------------------------------------
@@ -169,15 +172,15 @@ while getopts s:d:m: opts; do
     esac
 done
 
-startLog
-logOut "INFO" "args: [ $* ]"
-
 trap "terminate" HUP INT QUIT TERM
 
 mode=${mode:-"0"}
 
 # Check the validity of the argument.
 checkArgs "$src_path" "$dst_file" "$mode"
+
+startLog
+logOut "INFO" "args: [ $* ]"
 
 case "$os" in
     AIX)

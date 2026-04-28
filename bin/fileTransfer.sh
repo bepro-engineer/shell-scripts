@@ -125,18 +125,18 @@ checkArgs() {
 # 使用箇所　：引数ミス時
 # ------------------------------------------------------------------
 usage() {
-    cat <<'EOF'
+    cat >&2 <<'EOF'
 --------------------------------------
 Usage:
-bash fileTransfer.sh -m <send|recv> -f <file_path> -t <target_dir>
+  bash fileTransfer.sh -m <send|recv> -f <file_path> -t <target_dir>
 
 Options:
--m mode       : send または recv を指定（処理モード）
--f file_path  : 処理対象のファイルパス
--t target_dir : 出力先または受信先ディレクトリのパス
+  -m mode       : send または recv を指定（処理モード）
+  -f file_path  : 処理対象のファイルパス
+  -t target_dir : 出力先または受信先ディレクトリのパス
 
 Example:
-bash fileTransfer.sh -m send -f /path/to/file.txt -t /path/to/target
+  bash fileTransfer.sh -m send -f /path/to/file.txt -t /path/to/target
 --------------------------------------
 EOF
 }
@@ -236,8 +236,8 @@ if [ "$mode" = "send" ]; then
             exitLog ${JOB_ER}
         fi
 
-        src_hash=$(getMd5sum "$src_fp")
-        dst_hash=$(getMd5sum "$dst_fp")
+        src_hash=$(getFileHash "$src_fp")
+        dst_hash=$(getFileHash "$dst_fp")
 
         if [ "$src_hash" != "$dst_hash" ]; then
             logOut "ERROR" "MD5値が一致しません。転送失敗 [$src_hash] != [$dst_hash]"
@@ -279,7 +279,7 @@ elif [ "$mode" = "recv" ]; then
         fi
 
         org_hash=$(cat "${src_fp}.end")
-        new_hash=$(getMd5sum "$dst_fp")
+        new_hash=$(getFileHash "$dst_fp")
 
         if [ "$org_hash" != "$new_hash" ]; then
             logOut "ERROR" "MD5検証失敗。 [$org_hash] != [$new_hash]"

@@ -1,28 +1,30 @@
 #!/bin/bash
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
-# 関数名　　：dirTransfer.sh
-# 概要　　　：ディレクトリ単位の信頼性の高い転送（コピー／移動）
-# 説明　　　：
+# スクリプト名　：dirTransfer.sh
+# 概要　　　　：ディレクトリ単位の信頼性の高い転送（コピー／移動）
+# 説明　　　　：
 #   rsyncを使用して一時ディレクトリへ完全転送し、完了後にrenameでアトミックに入れ替える。
 #   - コピー（mode=0）または移動（mode=1）に対応。
 #   - 転送先に同名ディレクトリが存在する場合は削除して上書き。
 #   - 親子ディレクトリ誤設定による破壊的動作を防ぐ安全設計。
 #
-# 引数　　　：
+# 引数　　　　：
 #   -d <source_dir>   ：転送元ディレクトリ
 #   -t <target_dir>   ：転送先のベースディレクトリ（直下に配置される）
 #   -m <mode>         ：0=copy, 1=move（数字で指定）
 #
-# 戻り値　　：0=成功, 2=異常
-# 使用箇所　：ファイル連携、バックアップ、ディレクトリ同期等
+# 戻り値　　　：0=成功, 2=異常
+# 使用箇所　　：ファイル連携、バックアップ、ディレクトリ同期等
+#
+# 設計書　　　：なし
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 # ＜変更履歴＞
 # Ver. 変更管理No. 日付        更新者       変更内容
 # 1.0  PR-0001    2025/07/30 Bepro       新規作成
 #_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 # 共通クラスの読み込み
-. "$(dirname "$0")/../com/utils.shrc"
 . "$(dirname "$0")/../com/logger.shrc"
+. "$(dirname "$0")/../com/utils.shrc"
 
 setLANG     utf-8
 runAs root "$@"
@@ -77,16 +79,16 @@ terminate() {
 usage() {
     cat >&2 <<'EOF'
 --------------------------------------
-  Usage:
-    sh dirTransfer.sh -d <source_dir> -t <target_dir> -m <mode>
+Usage:
+  bash dirTransfer.sh -d <source_dir> -t <target_dir> -m <mode>
 
-  Options:
-    -d source_dir : 転送元ディレクトリ
-    -t target_dir : 転送先のベースディレクトリ
-    -m mode       : 0=copy, 1=move
+Options:
+  -d source_dir : 転送元ディレクトリ
+  -t target_dir : 転送先のベースディレクトリ
+  -m mode       : 0=copy, 1=move
 
-  Example:
-    sh dirTransfer.sh -d /path/srcDir -t /path/targetBaseDir -m 0
+Example:
+  bash dirTransfer.sh -d /path/srcDir -t /path/targetBaseDir -m 0
 --------------------------------------
 EOF
 }
@@ -143,8 +145,6 @@ checkArgs() {
 # ------------------------------------------------------------------
 scope="pre"
 
-startLog
-
 src_dir=""
 dst_dir=""
 mode=""
@@ -159,6 +159,8 @@ while getopts d:t:m: opt; do
          ;;
     esac
 done
+
+startLog
 
 if [ "$OPTIND" -eq 1 ]; then
     logOut "ERROR" "No arguments provided."
