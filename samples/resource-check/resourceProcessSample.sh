@@ -31,7 +31,10 @@
 # variables
 # ----------------------------------------------------------
 JOB_OK=0
+JOB_WR=1
 JOB_ER=2
+
+top_n=10
 
 # ----------------------------------------------------------
 # functions
@@ -65,13 +68,17 @@ usage() {
   cat >&2 <<'EOF'
 --------------------------------------
 Usage:
-  bash resourceProcessSample.sh
+  bash resourceProcessSample.sh [top_n]
 
 Options:
   -h : Usage を表示
 
+Arguments:
+  top_n : 表示件数（正の整数）省略時=10
+
 Example:
   bash resourceProcessSample.sh
+  bash resourceProcessSample.sh 20
 --------------------------------------
 EOF
 }
@@ -80,9 +87,10 @@ EOF
 # 関数名　　：checkArgs
 # 概要　　　：引数の妥当性を確認する
 # 説明　　　：
-#   引数不正を検知した場合は Usage を表示して終了する。
+#   top_n は正の整数でなければならない。
+#   不正を検知した場合は Usage を表示して終了する。
 #
-# 引数　　　：スクリプト引数一式
+# 引数　　　：[$1=top_n]
 # 戻り値　　：なし（エラー時はスクリプトを終了する）
 # 使用箇所　：前処理
 # ------------------------------------------------------------------
@@ -95,15 +103,23 @@ checkArgs() {
         ;;
       \?)
         usage
-        exit ${JOB_ER}
+        exit ${JOB_WR}
         ;;
     esac
   done
   shift $((OPTIND - 1))
 
-  if [ $# -gt 0 ]; then
+  if [ $# -gt 1 ]; then
     usage
-    exit ${JOB_ER}
+    exit ${JOB_WR}
+  fi
+
+  if [ $# -ge 1 ]; then
+    if ! isPositiveInt "$1"; then
+      usage
+      exit ${JOB_WR}
+    fi
+    top_n="$1"
   fi
 }
 
@@ -143,6 +159,29 @@ printSection() {
 }
 
 # ------------------------------------------------------------------
+# 関数名　　：isPositiveInt
+# 概要　　　：正の整数かどうかを判定する
+# 説明　　　：
+#   値が 1 以上の整数である場合に 0 を返す。
+#   空文字・非数値・0・負数は 1 を返す。
+#
+# 引数　　　：$1=判定対象の値
+# 戻り値　　：0=正の整数, 1=それ以外
+# 使用箇所　：checkArgs
+# ------------------------------------------------------------------
+isPositiveInt() {
+  local val="$1"
+  case "${val}" in
+    ''|*[!0-9]*)
+      return 1 ;;
+    0)
+      return 1 ;;
+    *)
+      return 0 ;;
+  esac
+}
+
+# ------------------------------------------------------------------
 # 関数名　　：collectPsList
 # 概要　　　：全プロセス一覧を収集して出力する
 # 説明　　　：
@@ -161,30 +200,30 @@ collectPsList() {
 # 関数名　　：collectTopCpuProcess
 # 概要　　　：CPU 使用率上位プロセスを収集して出力する
 # 説明　　　：
-#   ps コマンドで CPU 使用率の高いプロセスを上位 15 件表示する。
+#   ps コマンドで CPU 使用率の高いプロセスを上位 top_n 件表示する。
 #
 # 引数　　　：なし
 # 戻り値　　：なし
 # 使用箇所　：メイン処理
 # ------------------------------------------------------------------
 collectTopCpuProcess() {
-  printSection "CPU 使用率上位プロセス (top 15)"
-  ps aux --sort='-%cpu' | head -16
+  printSection "CPU 使用率上位プロセス (top ${top_n})"
+  ps aux --sort='-%cpu' | head -$((top_n + 1))
 }
 
 # ------------------------------------------------------------------
 # 関数名　　：collectTopMemProcess
 # 概要　　　：メモリ使用率上位プロセスを収集して出力する
 # 説明　　　：
-#   ps コマンドでメモリ使用率の高いプロセスを上位 15 件表示する。
+#   ps コマンドでメモリ使用率の高いプロセスを上位 top_n 件表示する。
 #
 # 引数　　　：なし
 # 戻り値　　：なし
 # 使用箇所　：メイン処理
 # ------------------------------------------------------------------
 collectTopMemProcess() {
-  printSection "メモリ使用率上位プロセス (top 15)"
-  ps aux --sort='-%mem' | head -16
+  printSection "メモリ使用率上位プロセス (top ${top_n})"
+  ps aux --sort='-%mem' | head -$((top_n + 1))
 }
 
 # ------------------------------------------------------------------
@@ -219,7 +258,7 @@ collectPstree() {
 collectServices() {
   printSection "サービス一覧"
   if command -v systemctl > /dev/null 2>&1; then
-    printf '--- systemctl list-units (type=service, state=running) ---\n'
+    printf '%s\n' '--- systemctl list-units (type=service, state=running) ---'
     systemctl list-units --type=service --state=running --no-pager 2>/dev/null
     printf '\n--- systemctl list-units (type=service, state=failed) ---\n'
     systemctl list-units --type=service --state=failed --no-pager 2>/dev/null

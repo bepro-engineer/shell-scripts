@@ -19,7 +19,7 @@
 #   DBへ自動ログインしない。
 #   ユーザー名、パスワード、接続文字列は扱わない。
 #   本番DBへ問い合わせを投げない。
-#   客先確認後に、必要な取得範囲だけ正式Shellへ反映する。
+#   客先確認後に、取得範囲と接続方式を決めて正式化する。
 # 使用箇所　　：取得観点確認用サンプル実行時
 #
 # 設計書　　　：なし
@@ -68,6 +68,11 @@ usage() {
 --------------------------------------
 Usage:
   bash resourceOracleStatspackSample.sh
+
+実行前に必要な設定:
+  export ORACLE_SID=＜対象DBのSID＞
+  export ORACLE_HOME=＜Oracleホームディレクトリ＞
+  export PATH="$ORACLE_HOME/bin:$PATH"
 
 Options:
   -h : Usage を表示

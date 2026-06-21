@@ -160,7 +160,7 @@ collectIfInfo() {
   elif checkCmd ifconfig; then
     ifconfig -a
   elif [ -f /proc/net/dev ]; then
-    printf '--- /proc/net/dev ---\n'
+    printf '%s\n' '--- /proc/net/dev ---'
     cat /proc/net/dev
   fi
 }
@@ -179,7 +179,7 @@ collectIfInfo() {
 collectNetConnections() {
   printSection "ネットワーク接続状況 (LISTEN + ESTABLISHED)"
   if command -v ss > /dev/null 2>&1; then
-    printf '--- ss -tulnp ---\n'
+    printf '%s\n' '--- ss -tulnp ---'
     ss -tulnp
     printf '\n--- ss -s (サマリー) ---\n'
     ss -s
@@ -227,7 +227,7 @@ collectRouteInfo() {
     netstat -r
   else
     if [ -f /proc/net/route ]; then
-      printf '--- /proc/net/route ---\n'
+      printf '%s\n' '--- /proc/net/route ---'
       cat /proc/net/route
     fi
   fi

@@ -67,6 +67,26 @@ Oracle Statspack の取得可否を確認するための前提情報を表示す
 - 本番DBへ問い合わせを投げない
 - 客先確認後に、必要な取得範囲だけ正式Shellへ反映する
 
+## 取得観点一覧・引数仕様
+
+| ファイル | 取得する情報 | 主な使用コマンド | 引数 | 引数省略時 | 実行例 |
+|---|---|---|---|---|---|
+| resourceBasicSample.sh | date / hostname / OS情報 / kernel / uptime / CPU数 / load average | date, hostname, uname, uptime, getconf など | なし | なし | `bash samples/resource-check/resourceBasicSample.sh` |
+| resourceCurrentSample.sh | CPU現在値 / memory / swap / disk / inode / load average | uptime, free, df, top, ps など | なし | なし | `bash samples/resource-check/resourceCurrentSample.sh` |
+| resourceSarSample.sh | sar によるCPU、メモリ、I/O、ネットワーク等の性能情報取得例 | sar | 第1引数 interval_sec=取得間隔秒<br>第2引数 count=取得回数 | interval_sec=1<br>count=3 | `bash samples/resource-check/resourceSarSample.sh 5 12` |
+| resourceVmstatSample.sh | vmstat によるCPU待ち、メモリ、swap、I/O、system、CPU使用傾向 | vmstat | 第1引数 interval_sec=取得間隔秒<br>第2引数 count=取得回数 | interval_sec=1<br>count=3 | `bash samples/resource-check/resourceVmstatSample.sh 5 12` |
+| resourceIoSample.sh | ディスク使用量 / inode / iostat によるI/O傾向 | df, iostat | 第1引数 interval_sec=iostat取得間隔秒<br>第2引数 count=iostat取得回数 | interval_sec=1<br>count=3 | `bash samples/resource-check/resourceIoSample.sh 5 12` |
+| resourceNetworkSample.sh | IP情報 / NIC状態 / routing / LISTENポート | ip, ss, netstat など | なし | なし | `bash samples/resource-check/resourceNetworkSample.sh` |
+| resourceProcessSample.sh | CPU使用率上位プロセス / メモリ使用率上位プロセス | ps | 第1引数 top_n=表示件数 | top_n=10 | `bash samples/resource-check/resourceProcessSample.sh 20` |
+| resourceOracleStatspackSample.sh | Oracle Statspack 取得可否の前提確認（sqlplus / ORACLE_HOME / ORACLE_SID / spreport.sql / spauto.sql など） | command -v, find, ls など | なし | なし | `bash samples/resource-check/resourceOracleStatspackSample.sh` |
+
+**引数検証ルール（sar / vmstat / io / process）**
+
+- 引数が正の整数でない場合は Usage を表示して rc=1 で終了する
+- `0`・負数・数値以外の値は正の整数として扱わない
+- 引数省略時はデフォルト値を使用する
+- `sar` / `iostat` が未インストールの場合は `command not found` を表示してスキップする
+
 ## 実行方法
 
 ### 構文確認

@@ -33,7 +33,11 @@
 # variables
 # ----------------------------------------------------------
 JOB_OK=0
+JOB_WR=1
 JOB_ER=2
+
+interval_sec=1
+count=3
 
 # ----------------------------------------------------------
 # functions
@@ -67,13 +71,18 @@ usage() {
   cat >&2 <<'EOF'
 --------------------------------------
 Usage:
-  bash resourceSarSample.sh
+  bash resourceSarSample.sh [interval_sec] [count]
 
 Options:
   -h : Usage を表示
 
+Arguments:
+  interval_sec : 取得間隔秒（正の整数）省略時=1
+  count        : 取得回数（正の整数）省略時=3
+
 Example:
   bash resourceSarSample.sh
+  bash resourceSarSample.sh 5 12
 --------------------------------------
 EOF
 }
@@ -82,9 +91,10 @@ EOF
 # 関数名　　：checkArgs
 # 概要　　　：引数の妥当性を確認する
 # 説明　　　：
-#   引数不正を検知した場合は Usage を表示して終了する。
+#   interval_sec と count はそれぞれ正の整数でなければならない。
+#   不正を検知した場合は Usage を表示して終了する。
 #
-# 引数　　　：スクリプト引数一式
+# 引数　　　：[$1=interval_sec] [$2=count]
 # 戻り値　　：なし（エラー時はスクリプトを終了する）
 # 使用箇所　：前処理
 # ------------------------------------------------------------------
@@ -97,15 +107,31 @@ checkArgs() {
         ;;
       \?)
         usage
-        exit ${JOB_ER}
+        exit ${JOB_WR}
         ;;
     esac
   done
   shift $((OPTIND - 1))
 
-  if [ $# -gt 0 ]; then
+  if [ $# -gt 2 ]; then
     usage
-    exit ${JOB_ER}
+    exit ${JOB_WR}
+  fi
+
+  if [ $# -ge 1 ]; then
+    if ! isPositiveInt "$1"; then
+      usage
+      exit ${JOB_WR}
+    fi
+    interval_sec="$1"
+  fi
+
+  if [ $# -ge 2 ]; then
+    if ! isPositiveInt "$2"; then
+      usage
+      exit ${JOB_WR}
+    fi
+    count="$2"
   fi
 }
 
@@ -145,71 +171,90 @@ printSection() {
 }
 
 # ------------------------------------------------------------------
-# 関数名　　：collectSarCpu
-# 概要　　　：sar による CPU 使用率履歴を収集して出力する
+# 関数名　　：isPositiveInt
+# 概要　　　：正の整数かどうかを判定する
 # 説明　　　：
-#   sar -u で当日の CPU 使用率履歴を取得する。
-#   データが存在しない場合は 1 秒間隔で 3 回のリアルタイム計測を行う。
+#   値が 1 以上の整数である場合に 0 を返す。
+#   空文字・非数値・0・負数は 1 を返す。
+#
+# 引数　　　：$1=判定対象の値
+# 戻り値　　：0=正の整数, 1=それ以外
+# 使用箇所　：checkArgs
+# ------------------------------------------------------------------
+isPositiveInt() {
+  local val="$1"
+  case "${val}" in
+    ''|*[!0-9]*)
+      return 1 ;;
+    0)
+      return 1 ;;
+    *)
+      return 0 ;;
+  esac
+}
+
+# ------------------------------------------------------------------
+# 関数名　　：collectSarCpu
+# 概要　　　：sar による CPU 使用率を収集して出力する
+# 説明　　　：
+#   sar -u で CPU 使用率を interval_sec 秒間隔で count 回取得する。
 #
 # 引数　　　：なし
 # 戻り値　　：なし
 # 使用箇所　：メイン処理
 # ------------------------------------------------------------------
 collectSarCpu() {
-  printSection "CPU 使用率履歴 (sar -u)"
+  printSection "CPU 使用率 (sar -u)"
   checkCmd sar || return 0
-  sar -u 2>/dev/null || sar -u 1 3
+  sar -u "${interval_sec}" "${count}"
 }
 
 # ------------------------------------------------------------------
 # 関数名　　：collectSarMem
-# 概要　　　：sar によるメモリ使用率履歴を収集して出力する
+# 概要　　　：sar によるメモリ使用率を収集して出力する
 # 説明　　　：
-#   sar -r で当日のメモリ使用率履歴を取得する。
-#   データが存在しない場合は 1 秒間隔で 3 回のリアルタイム計測を行う。
+#   sar -r でメモリ使用率を interval_sec 秒間隔で count 回取得する。
 #
 # 引数　　　：なし
 # 戻り値　　：なし
 # 使用箇所　：メイン処理
 # ------------------------------------------------------------------
 collectSarMem() {
-  printSection "メモリ使用率履歴 (sar -r)"
+  printSection "メモリ使用率 (sar -r)"
   checkCmd sar || return 0
-  sar -r 2>/dev/null || sar -r 1 3
+  sar -r "${interval_sec}" "${count}"
 }
 
 # ------------------------------------------------------------------
 # 関数名　　：collectSarNet
-# 概要　　　：sar によるネットワーク統計履歴を収集して出力する
+# 概要　　　：sar によるネットワーク統計を収集して出力する
 # 説明　　　：
-#   sar -n DEV で当日のネットワークインターフェース統計を取得する。
-#   データが存在しない場合は 1 秒間隔で 3 回のリアルタイム計測を行う。
+#   sar -n DEV でネットワーク統計を interval_sec 秒間隔で count 回取得する。
 #
 # 引数　　　：なし
 # 戻り値　　：なし
 # 使用箇所　：メイン処理
 # ------------------------------------------------------------------
 collectSarNet() {
-  printSection "ネットワーク統計履歴 (sar -n DEV)"
+  printSection "ネットワーク統計 (sar -n DEV)"
   checkCmd sar || return 0
-  sar -n DEV 2>/dev/null || sar -n DEV 1 3
+  sar -n DEV "${interval_sec}" "${count}"
 }
 
 # ------------------------------------------------------------------
 # 関数名　　：collectSarDisk
-# 概要　　　：sar によるディスク I/O 履歴を収集して出力する
+# 概要　　　：sar によるディスク I/O 統計を収集して出力する
 # 説明　　　：
-#   sar -b で当日のディスク I/O 統計を取得する。
-#   データが存在しない場合は 1 秒間隔で 3 回のリアルタイム計測を行う。
+#   sar -b でディスク I/O 統計を interval_sec 秒間隔で count 回取得する。
 #
 # 引数　　　：なし
 # 戻り値　　：なし
 # 使用箇所　：メイン処理
 # ------------------------------------------------------------------
 collectSarDisk() {
-  printSection "ディスク I/O 履歴 (sar -b)"
+  printSection "ディスク I/O 統計 (sar -b)"
   checkCmd sar || return 0
-  sar -b 2>/dev/null || sar -b 1 3
+  sar -b "${interval_sec}" "${count}"
 }
 
 # ----------------------------------------------------------

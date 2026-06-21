@@ -31,7 +31,11 @@
 # variables
 # ----------------------------------------------------------
 JOB_OK=0
+JOB_WR=1
 JOB_ER=2
+
+interval_sec=1
+count=3
 
 # ----------------------------------------------------------
 # functions
@@ -65,13 +69,18 @@ usage() {
   cat >&2 <<'EOF'
 --------------------------------------
 Usage:
-  bash resourceVmstatSample.sh
+  bash resourceVmstatSample.sh [interval_sec] [count]
 
 Options:
   -h : Usage を表示
 
+Arguments:
+  interval_sec : 取得間隔秒（正の整数）省略時=1
+  count        : 取得回数（正の整数）省略時=3
+
 Example:
   bash resourceVmstatSample.sh
+  bash resourceVmstatSample.sh 5 12
 --------------------------------------
 EOF
 }
@@ -80,9 +89,10 @@ EOF
 # 関数名　　：checkArgs
 # 概要　　　：引数の妥当性を確認する
 # 説明　　　：
-#   引数不正を検知した場合は Usage を表示して終了する。
+#   interval_sec と count はそれぞれ正の整数でなければならない。
+#   不正を検知した場合は Usage を表示して終了する。
 #
-# 引数　　　：スクリプト引数一式
+# 引数　　　：[$1=interval_sec] [$2=count]
 # 戻り値　　：なし（エラー時はスクリプトを終了する）
 # 使用箇所　：前処理
 # ------------------------------------------------------------------
@@ -95,15 +105,31 @@ checkArgs() {
         ;;
       \?)
         usage
-        exit ${JOB_ER}
+        exit ${JOB_WR}
         ;;
     esac
   done
   shift $((OPTIND - 1))
 
-  if [ $# -gt 0 ]; then
+  if [ $# -gt 2 ]; then
     usage
-    exit ${JOB_ER}
+    exit ${JOB_WR}
+  fi
+
+  if [ $# -ge 1 ]; then
+    if ! isPositiveInt "$1"; then
+      usage
+      exit ${JOB_WR}
+    fi
+    interval_sec="$1"
+  fi
+
+  if [ $# -ge 2 ]; then
+    if ! isPositiveInt "$2"; then
+      usage
+      exit ${JOB_WR}
+    fi
+    count="$2"
   fi
 }
 
@@ -143,6 +169,29 @@ printSection() {
 }
 
 # ------------------------------------------------------------------
+# 関数名　　：isPositiveInt
+# 概要　　　：正の整数かどうかを判定する
+# 説明　　　：
+#   値が 1 以上の整数である場合に 0 を返す。
+#   空文字・非数値・0・負数は 1 を返す。
+#
+# 引数　　　：$1=判定対象の値
+# 戻り値　　：0=正の整数, 1=それ以外
+# 使用箇所　：checkArgs
+# ------------------------------------------------------------------
+isPositiveInt() {
+  local val="$1"
+  case "${val}" in
+    ''|*[!0-9]*)
+      return 1 ;;
+    0)
+      return 1 ;;
+    *)
+      return 0 ;;
+  esac
+}
+
+# ------------------------------------------------------------------
 # 関数名　　：collectVmstatSnapshot
 # 概要　　　：vmstat の現在スナップショットを収集して出力する
 # 説明　　　：
@@ -162,16 +211,16 @@ collectVmstatSnapshot() {
 # 関数名　　：collectVmstatInterval
 # 概要　　　：vmstat のインターバル計測結果を収集して出力する
 # 説明　　　：
-#   vmstat を 1 秒間隔で 5 回取得してシステムアクティビティを表示する。
+#   vmstat を interval_sec 秒間隔で count 回取得してシステムアクティビティを表示する。
 #
 # 引数　　　：なし
 # 戻り値　　：なし
 # 使用箇所　：メイン処理
 # ------------------------------------------------------------------
 collectVmstatInterval() {
-  printSection "vmstat インターバル計測 (1秒 × 5回)"
+  printSection "vmstat インターバル計測 (${interval_sec}秒 × ${count}回)"
   checkCmd vmstat || return 0
-  vmstat 1 5
+  vmstat "${interval_sec}" "${count}"
 }
 
 # ------------------------------------------------------------------
