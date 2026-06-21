@@ -7,3 +7,7 @@ tsconfig.json
 rep/
 tmp/
 .task/
+
+# temporary import / migration work
+tmp-bin/
+import/
