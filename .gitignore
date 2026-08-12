@@ -11,3 +11,6 @@ tmp/
 # temporary import / migration work
 tmp-bin/
 import/
+
+# local-only samples
+samples/
