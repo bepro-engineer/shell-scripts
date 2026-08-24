@@ -110,14 +110,14 @@ doMenu() {
       fi
     done
     # 今の階層に無い番号は、階層をまたいで直接指定されたものとみなし
-    # (例: トップから111を直接入力)、ID一致する行を全体から探す。
-    # ただし戻る/終了番号(9,99,999等)は各グループで使い回すため対象外とし、
-    # 一意に決まらない場合は無効として扱う。
+    # (例: トップから111を直接入力、あるいはトップから12でtomcat管理へ直接遷移)、
+    # ID一致する行を全体から探す。戻る/終了番号(9,99,999等)は複数グループで
+    # 使い回すため全体では一意にならず、その場合のみ無効として扱う。
     if [ -z "$matched" ]; then
       local jumpMatch="" jumpCount=0
       for row in "${menuRows[@]}"; do
         IFS='|' read -r rgrp rid rcommand rlabel <<< "$row"
-        if [ "$rid" = "$sel" ] && [[ "$rcommand" != "doNormalEnd" ]] && [[ "$rcommand" != "${selfName} "* ]]; then
+        if [ "$rid" = "$sel" ]; then
           jumpMatch="$rcommand"
           jumpCount=$((jumpCount + 1))
         fi
