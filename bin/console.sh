@@ -42,12 +42,20 @@ echoNl() {
   printf "%*s%s\n" "$indent" "" "$*"
 }
 question() {
-  local msg="$1"
-  if confirmAction "${msg} [yes/no]"; then
-    ans="yes"
-  else
-    ans="no"
-  fi
+  local msg="$1" default="$2" type="$3"
+  case "$type" in
+    yesNo)
+      if confirmAction "${msg} [y/N]"; then
+        ans="yes"
+      else
+        ans="no"
+      fi
+      ;;
+    *)
+      read -r -p "${msg} (${default}): " ans
+      [ -z "$ans" ] && ans="$default"
+      ;;
+  esac
 }
 initPlatform() { :; }
 doMenu() {
@@ -66,6 +74,7 @@ doMenu() {
   if [ "$sel" = "0" ]; then exit 0; fi
   local target="${menuMap[$sel]}"
   if [ -n "$target" ]; then
+    cmd="$target"
     "$target"
   else
     echoNl 2 "無効な番号です。"
@@ -75,17 +84,10 @@ setLANG     utf-8
 runAs root "$@"
 
 SCRIPT_HOME="${BASE_PATH}/bin"
-DOMAIN_HOME="/var/opt/FJSVisje6/nodes/localhost-domain1"
-ASADMIN_CMD="/opt/FJSVisje6/glassfish/bin/asadmin"
-WEB_HOME="/var/jsc"
-CHK_MSG_1="環境番号を入力してください。01-15（必須）"
-CHK_MSG_2="クラスタIDを入力してください。"
-CHK_MSG_3="よろしいですか？"
-CHK_MSG_4="表示する件数を指定してください。（必須）"
-CHK_MSG_5="対象のデータソース番号を選択してください。（必須）"
-CHK_MSG_6="設定するリソース番号を選択してください。（必須）"
-CHK_MSG_7="設定する値を入力してください。（必須）"
-CHK_MSG_8="対象のターゲット番号を選択してください。（必須）"
+CHK_MSG_SVC="サービス名を入力してください。（例: httpd, tomcat, sshd）"
+CHK_MSG_CTX="Tomcatのコンテキストパスを入力してください。（例: /myapp）"
+CHK_MSG_DIR="バックアップ対象ディレクトリを入力してください。"
+CHK_MSG_YN="よろしいですか？"
 
 # ----------------------------------------------------------------
 # Checking the Configuration file.
@@ -157,1168 +159,148 @@ getCluster() {
 }
 
 # ----------------------------------------------------------------
-# Selection of POSTGRES.
-# ---------------------------------------------------------------
+# Get the caption for a menu action.
+# ----------------------------------------------------------------
 # return   N/A
 # ----------------------------------------------------------------
 getCaption() {
   case $1 in
-    status_httpd           ) echo "HTTPDの状態を確認" 	     ;;
-    start_httpd	           ) echo "HTTPDを起動"              ;;
-    stop_httpd	           ) echo "HTTPDを停止"              ;;
-    port_no_httpd          ) echo "HTTPDのポート番号を確認"  ;;
-    collect_httpd          ) echo "HTTPDの資材を回収"        ;;
-    check_httpd_accesslog  ) echo "アクセスログを確認"       ;;
-    check_httpd_errorlog   ) echo "エラーログを確認"         ;;
-    status_instance        ) echo "インスタンスの状態を確認" ;;
-    start_instance         ) echo "インスタンスを起動"       ;;
-    stop_instance          ) echo "インスタンスを停止"       ;;
-    check_ias_accesslog    ) echo "アクセスログを確認"       ;;
-    check_ias_errorlog     ) echo "エラーログを確認"         ;;
-    port_no_insance        ) echo "インスタンスポート番号を確認";;
-    collect_instance       ) echo "インスタンスの資材を回収" ;;
-    list_datasource        ) echo "データソースの一覧を表示" ;;
-    delete_datasource      ) echo "データソースを削除"       ;;
-    create_datasource      ) echo "データソースを作成"       ;;
-    list_resource          ) echo "リソースの一覧を表示"     ;;
-    set_resource           ) echo "リソースを設定"           ;;
-    list_jvm_resource      ) echo "JVMリソースの一覧を表示"  ;;
-    delete_jvm_resource    ) echo "JVMリソースを削除"        ;;
-    set_jvm_resource       ) echo "JVMリソースを更新"        ;;
-    list_jndi              ) echo "データソース-JNDI間の紐付き情報を表示"  ;;
-    create_jndi            ) echo "JNDIを作成"               ;;
+    check_service_status    ) echo "サービスの状態を確認"           ;;
+    start_service            ) echo "サービスを起動"                 ;;
+    stop_service             ) echo "サービスを停止"                 ;;
+    list_tomcat_apps         ) echo "Tomcatアプリの一覧を表示"       ;;
+    check_tomcat_app_status  ) echo "Tomcatアプリの状態を確認"       ;;
+    check_server_resource    ) echo "サーバーリソースを確認"         ;;
+    backup_files             ) echo "指定ディレクトリをバックアップ" ;;
+    *) echo "$1" ;;
   esac
 }
 
 # ----------------------------------------------------------------
-# Check the state of Catalina.
+# サービスの状態を確認する (manage_service.sh -c status)
 # ----------------------------------------------------------------
 # return   N/A
 # ----------------------------------------------------------------
-port_no_httpd() {
+check_service_status() {
   logDebug "Method $cmd() Started!"
-
-  cluster=""
-  envNum=""
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    question "`getCaption $cmd`します。${CHK_MSG_2}" "空はALL" "alpha"
-    if [ ${ans} == "空はALL" ]; then
-      question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-      if [ $ans == "yes" ]; then
-        logDebug "${SCRIPT_HOME}/10_fjApacheCtl.sh -c port -p httpd -a ${envNum}"
-        ${SCRIPT_HOME}/10_fjApacheCtl.sh -c port -p httpd -a ${envNum}
-      else
-        echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-      fi
-    else
-      logDebug "ans:${ans}"
-      if printf '%s\n' "${CLUSTERS[@]}" | grep -qx "${ans}" > /dev/null >&2; then
-      cluster=${ans}
-        question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-        if [ $ans == "yes" ]; then
-          logDebug "${SCRIPT_HOME}/10_fjApacheCtl.sh -c port -p httpd -a ${envNum} -i ${cluster}"
-          ${SCRIPT_HOME}/10_fjAJapacheCtl.sh -c port -p httpd -a ${envNum} -i ${cluster}
-        else
-          echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-        fi
-      else
-        echoNl 2 "認識されないクラスタIDが入力されました。\\nクラスタIDは[ ${CLUSTERS[@]} ]の中から入力してください。\\n`getCaption ${cmd}`を中止します。"
-      fi
-    fi
+  question "`getCaption $cmd`します。${CHK_MSG_SVC}" "" "alpha"
+  if [ -n "${ans}" ]; then
+    logDebug "${SCRIPT_HOME}/manage_service.sh -s ${ans} -c status"
+    ${SCRIPT_HOME}/manage_service.sh -s "${ans}" -c status
   else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
+    echoNl 2 "サービス名が入力されませんでした。`getCaption ${cmd}`を中止します。"
   fi
-
   logDebug "Method $cmd() Ended!"
 }
 
 # ----------------------------------------------------------------
-# Check the state of Catalina.
+# サービスを起動する (manage_service.sh -c start)
 # ----------------------------------------------------------------
 # return   N/A
 # ----------------------------------------------------------------
-status_httpd() {
+start_service() {
   logDebug "Method $cmd() Started!"
-
-  cluster=""
-  envNum=""
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"  
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    question "`getCaption $cmd`します。${CHK_MSG_2}" "空はALL" "alpha"
-    if [ ${ans} == "空はALL" ]; then
-      question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-      if [ $ans == "yes" ]; then
-        logDebug "${SCRIPT_HOME}/10_fjApacheCtl.sh -c status -p httpd -a ${envNum}"
-        ${SCRIPT_HOME}/10_fjApacheCtl.sh -c status -p httpd -a ${envNum}
-      else
-        echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-      fi
-    else
-      logDebug "ans:${ans}"
-      if printf '%s\n' "${CLUSTERS[@]}" | grep -qx "${ans}" > /dev/null >&2; then
-      cluster=${ans}
-        question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-        if [ $ans == "yes" ]; then
-          logDebug "${SCRIPT_HOME}/10_fjApacheCtl.sh -c status -p httpd -a ${envNum} -i ${cluster}"
-          ${SCRIPT_HOME}/10_fjApacheCtl.sh -c status -p httpd -a ${envNum} -i ${cluster}
-        else
-          echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-        fi
-      else
-        echoNl 2 "認識されないクラスタIDが入力されました。\\nクラスタIDは[ ${CLUSTERS[@]} ]の中から入力してください。\\n`getCaption ${cmd}`を中止します。"
-      fi
-    fi
-  else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
-  fi
-
-  logDebug "Method $cmd() Ended!"
-}
-
-# ----------------------------------------------------------------
-# START HTTPD.
-# ----------------------------------------------------------------
-# return   N/A
-# ----------------------------------------------------------------
-start_httpd() {
-  logDebug "Method $cmd() Started!"
-
-  cluster=""
-  envNum=""
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"  
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    question "`getCaption $cmd`します。${CHK_MSG_2}" "空はALL" "alpha"
-    if [ ${ans} == "空はALL" ]; then
-      question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-      if [ $ans == "yes" ]; then
-        logDebug "${SCRIPT_HOME}/10_fjApacheCtl.sh -c start -p httpd -a ${envNum}"
-        ${SCRIPT_HOME}/10_fjApacheCtl.sh -c start -p httpd -a ${envNum}
-      else
-        echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-      fi
-    else
-      logDebug "ans:${ans}"
-      if printf '%s\n' "${CLUSTERS[@]}" | grep -qx "${ans}" > /dev/null >&2; then
-      cluster=${ans}
-        question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-        if [ $ans == "yes" ]; then
-          logDebug "${SCRIPT_HOME}/10_fjApacheCtl.sh -c start -p httpd -a ${envNum} -i ${cluster}"
-          ${SCRIPT_HOME}/10_fjApacheCtl.sh -c start -p httpd -a ${envNum} -i ${cluster}
-        else
-          echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-        fi
-      else
-        echoNl 2 "認識されないクラスタIDが入力されました。\\nクラスタIDは[ ${CLUSTERS[@]} ]の中から入力してください。\\n`getCaption ${cmd}`を中止します。"
-      fi
-    fi
-  else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
-  fi
-
-  logDebug "Method $cmd() Ended!"
-}
-
-# ----------------------------------------------------------------
-# STOP HTTPD.
-# ----------------------------------------------------------------
-# return   N/A
-# ----------------------------------------------------------------
-stop_httpd() {
-  logDebug "Method $cmd() Started!"
-
-  cluster=""
-  envNum=""
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"  
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    question "`getCaption $cmd`します。${CHK_MSG_2}" "空はALL" "alpha"
-    if [ ${ans} == "空はALL" ]; then
-      question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-      if [ $ans == "yes" ]; then
-        logDebug "${SCRIPT_HOME}/10_fjApacheCtl.sh -c stop -p httpd -a ${envNum}"
-        ${SCRIPT_HOME}/10_fjApacheCtl.sh -c stop -p httpd -a ${envNum}
-      else
-        echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-      fi
-    else
-      logDebug "ans:${ans}"
-      if printf '%s\n' "${CLUSTERS[@]}" | grep -qx "${ans}" > /dev/null >&2; then
-      cluster=${ans}
-        question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-        if [ $ans == "yes" ]; then
-          logDebug "${SCRIPT_HOME}/10_fjApacheCtl.sh -c stop -p httpd -a ${envNum} -i ${cluster}"
-          ${SCRIPT_HOME}/10_fjApacheCtl.sh -c stop -p httpd -a ${envNum} -i ${cluster}
-        else
-          echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-        fi
-      else
-        echoNl 2 "認識されないクラスタIDが入力されました。\\nクラスタIDは[ ${CLUSTERS[@]} ]の中から入力してください。\\n`getCaption ${cmd}`を中止します。"
-      fi
-    fi
-  else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
-  fi
-
-  logDebug "Method $cmd() Ended!"
-}
-
-# ----------------------------------------------------------------
-# START INSTANCE.
-# ----------------------------------------------------------------
-# return   N/A
-# ----------------------------------------------------------------
-start_instance() {
-  logDebug "Method $cmd() Started!"
-
-  cluster=""
-  envNum=""
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"  
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    question "`getCaption $cmd`します。${CHK_MSG_2}" "空はALL" "alpha"
-    if [ ${ans} == "空はALL" ]; then
-      question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-      if [ $ans == "yes" ]; then
-        logDebug "${SCRIPT_HOME}/11_glassFishCtl.sh -c start -a ${envNum}"
-        ${SCRIPT_HOME}/11_glassFishCtl.sh -c start -a ${envNum}
-      else
-        echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-      fi
-    else
-      logDebug "ans:${ans}"
-      if printf '%s\n' "${CLUSTERS[@]}" | grep -qx "${ans}" > /dev/null >&2; then
-      cluster=${ans}
-        question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-        if [ $ans == "yes" ]; then
-          logDebug "${SCRIPT_HOME}/11_glassFishCtl.sh -c start -a ${envNum} -i ${cluster}"
-          ${SCRIPT_HOME}/11_glassFishCtl.sh -c start -a ${envNum} -i ${cluster}
-        else
-          echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-        fi
-      else
-        echoNl 2 "認識されないクラスタIDが入力されました。\\nクラスタIDは[ ${CLUSTERS[@]} ]の中から入力してください。\\n`getCaption ${cmd}`を中止します。"
-      fi
-    fi
-  else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
-  fi
-
-  logDebug "Method $cmd() Ended!"
-}
-
-# ----------------------------------------------------------------
-# STOP INSTANCE.
-# ----------------------------------------------------------------
-# return   N/A
-# ----------------------------------------------------------------
-stop_instance() {
-  logDebug "Method $cmd() Started!"
-
-  cluster=""
-  envNum=""
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"  
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    question "`getCaption $cmd`します。${CHK_MSG_2}" "空はALL" "alpha"
-    if [ ${ans} == "空はALL" ]; then
-      question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-      if [ $ans == "yes" ]; then
-        logDebug "${SCRIPT_HOME}/11_glassFishCtl.sh -c stop -a ${envNum}"
-        ${SCRIPT_HOME}/11_glassFishCtl.sh -c stop -a ${envNum}
-      else
-        echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-      fi
-    else
-      logDebug "ans:${ans}"
-      if printf '%s\n' "${CLUSTERS[@]}" | grep -qx "${ans}" > /dev/null >&2; then
-      cluster=${ans}
-        question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-        if [ $ans == "yes" ]; then
-          logDebug "${SCRIPT_HOME}/11_glassFishCtl.sh -c stop -a ${envNum} -i ${cluster}"
-          ${SCRIPT_HOME}/11_glassFishCtl.sh -c stop -a ${envNum} -i ${cluster}
-        else
-          echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-        fi
-      else
-        echoNl 2 "認識されないクラスタIDが入力されました。\\nクラスタIDは[ ${CLUSTERS[@]} ]の中から入力してください。\\n`getCaption ${cmd}`を中止します。"
-      fi
-    fi
-  else
-    echoNl 2 "01-15以外が入力されました。状態確認を中止します。"
-  fi
-
-  logDebug "Method $cmd() Ended!"
-}
-
-# ----------------------------------------------------------------
-# STATUS INSTANCE.
-# ----------------------------------------------------------------
-# return   N/A
-# ----------------------------------------------------------------
-status_instance() {
-  logDebug "Method $cmd() Started!"
-
-  cluster=""
-  envNum=""
-  question "`getCaption $cmd`します。${CHK_MSG_1}）" "11" "alpha"  
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    question "`getCaption $cmd`します。${CHK_MSG_2}" "空はALL" "alpha"
-    if [ ${ans} == "空はALL" ]; then
-      question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-      if [ $ans == "yes" ]; then
-        logDebug "${SCRIPT_HOME}/11_glassFishCtl.sh -c status -a ${envNum}"
-        ${SCRIPT_HOME}/11_glassFishCtl.sh -c status -a ${envNum}
-      else
-        echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-      fi
-    else
-      logDebug "ans:${ans}"
-      if printf '%s\n' "${CLUSTERS[@]}" | grep -qx "${ans}" > /dev/null >&2; then
-      cluster=${ans}
-        question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-        if [ $ans == "yes" ]; then
-          logDebug "${SCRIPT_HOME}/11_glassFishCtl.sh -c status -a ${envNum} -i ${cluster}"
-          ${SCRIPT_HOME}/11_glassFishCtl.sh -c status -a ${envNum} -i ${cluster}
-        else
-          echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-        fi
-      else
-        echoNl 2 "認識されないクラスタIDが入力されました。\\nクラスタIDは[ ${CLUSTERS[@]} ]の中から入力してください。\\n`getCaption ${cmd}`を中止します。"
-      fi
-    fi
-  else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
-  fi
-
-  logDebug "Method $cmd() Ended!"
-}
-
-# ----------------------------------------------------------------
-# PORT_NO INSTANCE.
-# ----------------------------------------------------------------
-# return   N/A
-# ----------------------------------------------------------------
-port_no_instance() {
-  logDebug "Method $cmd() Started!"
-
-  cluster=""
-  envNum=""
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    question "`getCaption $cmd`します。${CHK_MSG_2}" "空はALL" "alpha"
-    if [ ${ans} == "空はALL" ]; then
-      question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-      if [ $ans == "yes" ]; then
-        logDebug "${SCRIPT_HOME}/11_glassFishCtl.sh -c port -a ${envNum}"
-        ${SCRIPT_HOME}/11_glassFishCtl.sh -c port -a ${envNum}
-      else
-        echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-      fi
-    else
-      logDebug "ans:${ans}"
-      if printf '%s\n' "${CLUSTERS[@]}" | grep -qx "${ans}" > /dev/null >&2; then
-      cluster=${ans}
-        question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-        if [ $ans == "yes" ]; then
-          logDebug "${SCRIPT_HOME}/11_glassFishCtl.sh -c port -a ${envNum} -i ${cluster}"
-          ${SCRIPT_HOME}/11_glassFishCtl.sh -c port -a ${envNum} -i ${cluster}
-        else
-          echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-        fi
-      else
-        echoNl 2 "認識されないクラスタIDが入力されました。\\nクラスタIDは[ ${CLUSTERS[@]} ]の中から入力してください。\\n`getCaption ${cmd}`を中止します。"
-      fi
-    fi
-  else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
-  fi
-
-  logDebug "Method $cmd() Ended!"
-}
-
-# ----------------------------------------------------------------
-# COLLECT HTTPD.
-# ----------------------------------------------------------------
-# return   N/A
-# ----------------------------------------------------------------
-collect_httpd() {
-  logDebug "Method $cmd() Started!"
-
-  cluster=""
-  envNum=""
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    question "`getCaption $cmd`します。${CHK_MSG_2}" "空はALL" "alpha"
-    if [ ${ans} == "空はALL" ]; then
-      question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-      if [ $ans == "yes" ]; then
-        logDebug "${SCRIPT_HOME}/12_collectConfig.sh -c collect -p httpd -a ${envNum}"
-        ${SCRIPT_HOME}/12_collectConfig.sh -c collect -p httpd -a ${envNum}
-      else
-        echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-      fi
-    else
-      logDebug "ans:${ans}"
-      if printf '%s\n' "${CLUSTERS[@]}" | grep -qx "${ans}" > /dev/null >&2; then
-      cluster=${ans}
-        question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-        if [ $ans == "yes" ]; then
-          logDebug "${SCRIPT_HOME}/12_collectConfig.sh -c collect -p httpd -a ${envNum} -i ${cluster}"
-          ${SCRIPT_HOME}/12_collectConfig.sh -c collect -p httpd -a ${envNum} -i ${cluster}
-        else
-          echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-        fi
-      else
-        echoNl 2 "認識されないクラスタIDが入力されました。\\nクラスタIDは[ ${CLUSTERS[@]} ]の中から入力してください。\\n`getCaption ${cmd}`を中止します。"
-      fi
-    fi
-  else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
-  fi
-
-  logDebug "Method $cmd() Ended!"
-}
-
-# ----------------------------------------------------------------
-# COLLECT INSTANCE.
-# ----------------------------------------------------------------
-# return   N/A
-# ----------------------------------------------------------------
-collect_instance() {
-  logDebug "Method $cmd() Started!"
-
-  cluster=""
-  envNum=""
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"  
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    question "`getCaption $cmd`します。${CHK_MSG_2}" "空はALL" "alpha"
-    if [ ${ans} == "空はALL" ]; then
-      question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-      if [ $ans == "yes" ]; then
-        logDebug "${SCRIPT_HOME}/12_collectConfig.sh -c collect -p glassfish -a ${envNum}"
-        ${SCRIPT_HOME}/12_collectConfig.sh -c collect -p glassfish -a ${envNum}
-      else
-        echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-      fi
-    else
-      logDebug "ans:${ans}"
-      if printf '%s\n' "${CLUSTERS[@]}" | grep -qx "${ans}" > /dev/null >&2; then
-      cluster=${ans}
-        question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-        if [ $ans == "yes" ]; then
-          logDebug "${SCRIPT_HOME}/12_collectConfig.sh -c collect -p glassfish -a ${envNum} -i ${cluster}"
-          ${SCRIPT_HOME}/12_collectConfig.sh -c collect -p glassfish -a ${envNum} -i ${cluster}
-        else
-          echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-        fi
-      else
-        echoNl 2 "認識されないクラスタIDが入力されました。\\nクラスタIDは[ ${CLUSTERS[@]} ]の中から入力してください。\\n`getCaption ${cmd}`を中止します。"
-      fi
-    fi
-  else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
-  fi
-
-  logDebug "Method $cmd() Ended!"
-}
-# ----------------------------------------------------------------
-# CHECK HTTPD ACCESSLOG.
-# ----------------------------------------------------------------
-# return   N/A
-# ----------------------------------------------------------------
-check_httpd_accesslog() {
-  logDebug "Method $cmd() Started!"
-
-  cluster=""
-  envNum=""
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"  
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    question "`getCaption $cmd`します。${CHK_MSG_2}" "${CLUSTERS[0]}" "alpha"
-    if [ -n ${ans} ]; then
-      if printf '%s\n' "${CLUSTERS[@]}" | grep -qx "${ans}" > /dev/null >&2; then
-        cluster=${ans}
-        question "`getCaption $cmd`します。${CHK_MSG_4}" "30" "alpha"
-        if isNumeric ${ans}; then
-          count=${ans}
-          question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-          if [ ${ans} == "yes" ]; then
-            logDebug "tail -n ${count} ${WEB_HOME}/app${envNum}/web/WEB${cluster:3:4}${envNum}/logs/accesslog"
-            tail -n ${count} ${WEB_HOME}/app${envNum}/web/WEB${cluster:3:4}${envNum}/logs/accesslog
-          else
-            echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-          fi
-        else
-          echoNl 2 "不正な値が入力されました。`getCaption ${cmd}`を中止します。"
-        fi
-      fi
-    else
-      echoNl 2 "認識されないクラスタIDが入力されました。\\nクラスタIDは[ ${CLUSTERS[@]} ]の中から入力してください。\\n`getCaption ${cmd}`を中止します。"
-    fi
-  else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
-  fi
-
-  logDebug "Method $cmd() Ended!"
-}
-
-# ----------------------------------------------------------------
-# CHECK HTTPD ERRORLOG.
-# ----------------------------------------------------------------
-# return   N/A
-# ----------------------------------------------------------------
-check_httpd_errorlog() {
-  logDebug "Method $cmd() Started!"
-
-  cluster=""
-  envNum=""
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"  
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    question "`getCaption $cmd`します。${CHK_MSG_2}" "${CLUSTERS[0]}" "alpha"
-    if [ -n ${ans} ]; then
-      if printf '%s\n' "${CLUSTERS[@]}" | grep -qx "${ans}" > /dev/null >&2; then
-        cluster=${ans}
-        question "`getCaption $cmd`します。${CHK_MSG_4}" "30" "alpha"
-        if isNumeric ${ans}; then
-          count=${ans}
-          question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"        
-          if [ ${ans} == "yes" ]; then
-            logDebug "tail -n ${count} ${WEB_HOME}//app${envNum}/web/WEB${cluster:3:4}${envNum}/logs/errorlog"
-            tail -n ${count} ${WEB_HOME}//app${envNum}/web/WEB${cluster:3:4}${envNum}/logs/errorlog
-          else
-            echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-          fi
-        else
-          echoNl 2 "不正な値が入力されました。`getCaption ${cmd}`を中止します。"
-        fi
-      fi
-    else
-      echoNl 2 "認識されないクラスタIDが入力されました。\\nクラスタIDは[ ${CLUSTERS[@]} ]の中から入力してください。\\n`getCaption ${cmd}`を中止します。"
-    fi
-  else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
-  fi
-
-  logDebug "Method $cmd() Ended!"
-}
-
-# ----------------------------------------------------------------
-# CHECK IAS ACCESSLOG.
-# ----------------------------------------------------------------
-# return   N/A
-# ----------------------------------------------------------------
-check_ias_accesslog() {
-  logDebug "Method $cmd() Started!"
-
-  cluster=""
-  envNum=""
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    question "`getCaption $cmd`します。${CHK_MSG_2}" "${CLUSTERS[0]}" "alpha"
-    if [ -n ${ans} ]; then
-      if printf '%s\n' "${CLUSTERS[@]}" | grep -qx "${ans}" > /dev/null >&2; then
-        cluster=${ans}
-        question "`getCaption $cmd`します。${CHK_MSG_4}" "30" "alpha"
-        if isNumeric ${ans}; then
-          count=${ans}
-          question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-          if [ ${ans} == "yes" ]; then
-            logDebug "tail -n ${count} ${DOMAIN_HOME}/INS${cluster:3:4}${envNum}/logs/access/server_access_log.txt"
-            tail -n ${count} ${DOMAIN_HOME}/INS${cluster:3:4}${envNum}/logs/access/server_access_log.txt
-          else
-            echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-          fi
-        else
-          echoNl 2 "不正な値が入力されました。`getCaption ${cmd}`を中止します。"
-        fi
-      fi
-    else
-      echoNl 2 "認識されないクラスタIDが入力されました。\\nクラスタIDは[ ${CLUSTERS[@]} ]の中から入力してください。\\n
-`getCaption ${cmd}`を中止します。"
-    fi
-  else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
-  fi
-
-  logDebug "Method $cmd() Ended!"
-}
-
-# ----------------------------------------------------------------
-# CHECK IAS SERVERLOG.
-# ----------------------------------------------------------------
-# return   N/A
-# ----------------------------------------------------------------
-check_ias_serverlog() {
-  logDebug "Method $cmd() Started!"
-
-  cluster=""
-  envNum=""
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    question "`getCaption $cmd`します。${CHK_MSG_2}" "${CLUSTERS[0]}" "alpha"
-    if [ -n ${ans} ]; then
-      if printf '%s\n' "${CLUSTERS[@]}" | grep -qx "${ans}" > /dev/null >&2; then
-        cluster=${ans}
-        question "`getCaption $cmd`します。${CHK_MSG_4}" "30" "alpha"
-        if isNumeric ${ans}; then
-          count=${ans}
-          question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-          if [ ${ans} == "yes" ]; then
-            logDebug "tail -n ${count} ${DOMAIN_HOME}/INS${cluster:3:4}${envNum}/logs/server.log"
-            tail -n ${count} ${DOMAIN_HOME}/INS${cluster:3:4}${envNum}/logs/server.log
-          else
-            echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-          fi
-        else
-          echoNl 2 "不正な値が入力されました。`getCaption ${cmd}`を中止します。"
-        fi 
-      fi
-    else
-      echoNl 2 "認識されないクラスタIDが入力されました。\\nクラスタIDは[ ${CLUSTERS[@]} ]の中から入力してください。\\n
-`getCaption ${cmd}`を中止します。"
-    fi
-  else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
-  fi
-
-  logDebug "Method $cmd() Ended!"
-}
-
-# ----------------------------------------------------------------
-# LIST DATASOURCE.
-# ----------------------------------------------------------------
-# return   N/A
-# ----------------------------------------------------------------
-list_datasource() {
-  logDebug "Method $cmd() Started!"
-
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-    if [ ${ans} == "yes" ]; then
-      logDebug "${SCRIPT_HOME}/13_datasurceSetting.sh -c list -a ${envNum}"
-      ${SCRIPT_HOME}/13_datasurceSetting.sh -c list -a ${envNum}
+  question "`getCaption $cmd`します。${CHK_MSG_SVC}" "" "alpha"
+  local svc="${ans}"
+  if [ -n "${svc}" ]; then
+    question "[ ${svc} ] `getCaption $cmd`します。${CHK_MSG_YN}" "yes" "yesNo"
+    if [ "${ans}" == "yes" ]; then
+      logDebug "${SCRIPT_HOME}/manage_service.sh -s ${svc} -c start"
+      ${SCRIPT_HOME}/manage_service.sh -s "${svc}" -c start
     else
       echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
     fi
   else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
+    echoNl 2 "サービス名が入力されませんでした。`getCaption ${cmd}`を中止します。"
   fi
-
   logDebug "Method $cmd() Ended!"
 }
 
 # ----------------------------------------------------------------
-# DELETE DATASOURCE.
+# サービスを停止する (manage_service.sh -c stop)
 # ----------------------------------------------------------------
 # return   N/A
 # ----------------------------------------------------------------
-delete_datasource() {
+stop_service() {
   logDebug "Method $cmd() Started!"
-
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    line2 "$cmd"
-    arrayDs=()
-    count=0
-    arrayDs=(`${ASADMIN_CMD} -e list-jdbc-connection-pools | sed -e '1d' | sed -e '$d' | grep ${envNum}`)
-    for ds in ${arrayDs[@]} ; do
-      echo "${count} : ${ds}"
-      count=$(( count + 1 ))
-    done
-    lineF
-    question "`getCaption $cmd`します。削除${CHK_MSG_5}" "0" "alpha"
-    if isNumeric ${ans}; then
-      if [ ${ans} -lt ${#arrayDs[@]} ]; then
-        target=${ans}
-        question "[ ${arrayDs[${target}]} ]`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-        if [ ${ans} == "yes" ]; then
-          logDebug "${SCRIPT_HOME}/13_datasurceSetting.sh -c delete -a ${envNum} -t ${arrayDs[${target}]}"
-          ${SCRIPT_HOME}/13_datasurceSetting.sh -c delete -a ${envNum} -t ${arrayDs[${target}]}
-        else
-          echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-        fi
-      else
-        echoNl 2 "範囲外の数値が入力されました。`getCaption ${cmd}`を中止します。"        
-      fi
+  question "`getCaption $cmd`します。${CHK_MSG_SVC}" "" "alpha"
+  local svc="${ans}"
+  if [ -n "${svc}" ]; then
+    question "[ ${svc} ] `getCaption $cmd`します。${CHK_MSG_YN}" "yes" "yesNo"
+    if [ "${ans}" == "yes" ]; then
+      logDebug "${SCRIPT_HOME}/manage_service.sh -s ${svc} -c stop"
+      ${SCRIPT_HOME}/manage_service.sh -s "${svc}" -c stop
     else
-      echoNl 2 "数値以外が入力されました。`getCaption ${cmd}`を中止します。"
+      echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
     fi
   else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
+    echoNl 2 "サービス名が入力されませんでした。`getCaption ${cmd}`を中止します。"
   fi
-
   logDebug "Method $cmd() Ended!"
 }
 
 # ----------------------------------------------------------------
-# CREATE DATASOURCE.
+# Tomcatアプリの一覧を表示する (monitor_tomcat_app.sh -c list)
 # ----------------------------------------------------------------
 # return   N/A
 # ----------------------------------------------------------------
-create_datasource () {
+list_tomcat_apps() {
   logDebug "Method $cmd() Started!"
-  
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    line2 "${cmd}target"
-    arrayCaption=("cnt:（センターデータベース）" "ofs:（オフィシャルサイトデータベース）")
-    arrayDsClass=("cnt" "ofs")
-    count=0
-    for ds in ${arrayCaption[@]} ; do
-      echo "${count} : ${ds}"
-      count=$(( count + 1 ))
-    done
-    lineF
-    question "`getCaption $cmd`します。${CHK_MSG_8}" "0" "alpha"
-    if isNumeric ${ans}; then
-      if [ ${ans} -lt ${#arrayDsClass[@]} ]; then
-        target=${ans}
-        question "[ ${arrayCaption[${target}]} ]`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-        if [ ${ans} == "yes" ]; then
-          logDebug "${SCRIPT_HOME}/13_datasurceSetting.sh -c create -a ${envNum} -t ${arrayDsClass[${target}]}"
-          ${SCRIPT_HOME}/13_datasurceSetting.sh -c create -a ${envNum} -t ${arrayDsClass[${target}]}
-        else
-          echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-        fi
-      else
-        echoNl 2 "範囲外の数値が入力されました。`getCaption ${cmd}`を中止します。"
-      fi
-    else
-      echoNl 2 "数値以外が入力されました。`getCaption ${cmd}`を中止します。"
-    fi
-  else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
-  fi  
-
+  logDebug "${SCRIPT_HOME}/monitor_tomcat_app.sh -c list"
+  ${SCRIPT_HOME}/monitor_tomcat_app.sh -c list
   logDebug "Method $cmd() Ended!"
 }
 
 # ----------------------------------------------------------------
-# LIST RESOURCE.
+# Tomcatアプリの状態を確認する (monitor_tomcat_app.sh -c status)
 # ----------------------------------------------------------------
 # return   N/A
 # ----------------------------------------------------------------
-list_resource() {
+check_tomcat_app_status() {
   logDebug "Method $cmd() Started!"
-
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    line2 "$cmd"
-    arrayDs=()
-    count=0
-    arrayDs=(`${ASADMIN_CMD} -e list-jdbc-connection-pools | sed -e '1d' | sed -e '$d' | grep ${envNum}`)
-    for ds in ${arrayDs[@]} ; do
-      echo "${count} : ${ds}"
-      count=$(( count + 1 ))
-    done
-    lineF
-    question "`getCaption $cmd`します。${CHK_MSG_5}" "0" "alpha"
-    if isNumeric ${ans}; then
-      if [ ${ans} -lt ${#arrayDs[@]} ]; then
-        target=${ans}
-        question "[ ${arrayDs[${target}]} ]`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-        if [ ${ans} == "yes" ]; then
-          logDebug "${SCRIPT_HOME}/13_datasurceSetting.sh -c "list_resource" -a ${envNum} -t ${arrayDs[${target}]}"
-          ${SCRIPT_HOME}/13_datasurceSetting.sh -c "list_resource" -a ${envNum} -t ${arrayDs[${target}]}
-        else
-          echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-        fi
-      else
-        echoNl 2 "範囲外の数値が入力されました。`getCaption ${cmd}`を中止します。"
-      fi
-    else
-      echoNl 2 "数値以外が入力されました。`getCaption ${cmd}`を中止します。"
-    fi
+  question "`getCaption $cmd`します。${CHK_MSG_CTX}" "" "alpha"
+  if [ -n "${ans}" ]; then
+    logDebug "${SCRIPT_HOME}/monitor_tomcat_app.sh -c status -a ${ans}"
+    ${SCRIPT_HOME}/monitor_tomcat_app.sh -c status -a "${ans}"
   else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
+    echoNl 2 "コンテキストパスが入力されませんでした。`getCaption ${cmd}`を中止します。"
   fi
-
   logDebug "Method $cmd() Ended!"
 }
 
 # ----------------------------------------------------------------
-# SET RESOURCE.
+# サーバーリソースを確認する (serverResourceCheck.sh)
 # ----------------------------------------------------------------
 # return   N/A
 # ----------------------------------------------------------------
-set_resource() {
+check_server_resource() {
   logDebug "Method $cmd() Started!"
-
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    line2 "$cmd"
-    arrayDs=()
-    count=0
-    arrayDs=(`${ASADMIN_CMD} -e list-jdbc-connection-pools | sed -e '1d' | sed -e '$d' | grep ${envNum}`)
-    for ds in ${arrayDs[@]} ; do
-      echo "${count} : ${ds}"
-      count=$(( count + 1 ))
-    done
-    lineF
-    question "`getCaption $cmd`します。リソース設定${CHK_MSG_5}" "0" "alpha"
-    if isNumeric ${ans}; then
-      if [ ${ans} -lt ${#arrayDs[@]} ]; then
-        target=${ans}
-        line2 "choose"
-        arrayOpt=()
-        count=0
-        arrayOpt=("max-pool-size" "steady-pool-size" "pool-resize-quantity" "idle-timeout-in-seconds" "max-wait-time-in-millis")
-        for opt in ${arrayOpt[@]} ; do
-          echo "${count} : ${opt}"
-          count=$(( count + 1 ))
-        done
-        lineF
-        question "`getCaption $cmd`します。${CHK_MSG_6}" "0" "alpha"
-        if isNumeric ${ans}; then
-          if [ ${ans} -lt ${#arrayOpt[@]} ]; then
-            resource=${ans}
-            question "`getCaption $cmd`します。${CHK_MSG_7}" "10" "alpha"
-            if isNumeric ${ans}; then
-              val=${ans}
-              question "[ ${arrayOpt[${resource}]} ]`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-              if [ ${ans} == "yes" ]; then
-                logDebug "${SCRIPT_HOME}/13_datasurceSetting.sh -c set_resource -a ${envNum} -t ${arrayDs[${target}]}.${arrayOpt[${resource}]}=${val}"
-                ${SCRIPT_HOME}/13_datasurceSetting.sh -c set_resource -a ${envNum} -t ${arrayDs[${target}]}.${arrayOpt[${resource}]}=${val}
-              else
-                echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-              fi
-            else
-              echoNl 2 "数値以外が入力されました。`getCaption ${cmd}`を中止します。"
-            fi
-          else
-            echoNl 2 "範囲外の数値が入力されました。`getCaption ${cmd}`を中止します。"
-          fi
-        else
-          echoNl 2 "数値以外が入力されました。`getCaption ${cmd}`を中止します。"
-        fi
-      else
-        echoNl 2 "範囲外の数値が入力されました。`getCaption ${cmd}`を中止します。"
-      fi
-    else
-      echoNl 2 "数値以外が入力されました。`getCaption ${cmd}`を中止します。"
-    fi
-  else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
-  fi
-
+  logDebug "${SCRIPT_HOME}/serverResourceCheck.sh"
+  ${SCRIPT_HOME}/serverResourceCheck.sh
   logDebug "Method $cmd() Ended!"
 }
 
 # ----------------------------------------------------------------
-# LIST JVM RESOURCE
+# 指定ディレクトリをバックアップする (backupFiles.sh -b)
 # ----------------------------------------------------------------
 # return   N/A
 # ----------------------------------------------------------------
-list_jvm_resource() {
+backup_files() {
   logDebug "Method $cmd() Started!"
-
-  cluster=""
-  envNum=""
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    question "`getCaption $cmd`します。${CHK_MSG_2}" "空はALL" "alpha"
-    if [ ${ans} == "空はALL" ]; then
-      question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-      if [ $ans == "yes" ]; then
-        logDebug "${SCRIPT_HOME}/14_jvmSetting.sh -c list -a ${envNum}"
-        ${SCRIPT_HOME}/14_jvmSetting.sh -c list -a ${envNum}
-      else
-        echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-      fi
+  question "`getCaption $cmd`します。${CHK_MSG_DIR}" "" "alpha"
+  local dir="${ans}"
+  if [ -n "${dir}" ]; then
+    question "[ ${dir} ] `getCaption $cmd`します。${CHK_MSG_YN}" "yes" "yesNo"
+    if [ "${ans}" == "yes" ]; then
+      logDebug "${SCRIPT_HOME}/backupFiles.sh -b ${dir}"
+      ${SCRIPT_HOME}/backupFiles.sh -b "${dir}"
     else
-      logDebug "ans:${ans}"
-      if printf '%s\n' "${CLUSTERS[@]}" | grep -qx "${ans}" > /dev/null >&2; then
-      cluster=${ans}
-        question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-        if [ $ans == "yes" ]; then
-          logDebug "${SCRIPT_HOME}/14_jvmSetting.sh -c list -a ${envNum} -i ${cluster}"
-          ${SCRIPT_HOME}/14_jvmSetting.sh -c list -a ${envNum} -i ${cluster}
-        else
-          echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-        fi
-      else
-        echoNl 2 "認識されないクラスタIDが入力されました。\\nクラスタIDは[ ${CLUSTERS[@]} ]の中から入力してください。\\n`getCaption ${cmd}`を中止します。"
-      fi
+      echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
     fi
   else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
+    echoNl 2 "ディレクトリが入力されませんでした。`getCaption ${cmd}`を中止します。"
   fi
-
   logDebug "Method $cmd() Ended!"
-}
-
-# ----------------------------------------------------------------
-# DELETE JVM RESOURCE.
-# ----------------------------------------------------------------
-# return   N/A
-# ----------------------------------------------------------------
-delete_jvm_resource() {
-  logDebug "Method $cmd() Started!"
-
-  cluster=""
-  envNum=""
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    question "`getCaption $cmd`します。${CHK_MSG_2}" "${CLUSTERS[0]}" "alpha"
-    if [ -n ${ans} ]; then
-      if printf '%s\n' "${CLUSTERS[@]}" | grep -qx "${ans}" > /dev/null >&2; then
-        cluster=${ans}
-        arrayRes=()
-        line2 "$cmd"
-        count=0
-        arrayOpt=("\\-XX\\:MaxPermSize" "\\-XX\\:PermSize" "\\-Xmx" "\\-Xms" "\\-verbose" "\\-Dcntjndi" "\\-Dofsjndi")
-        for opt in ${arrayOpt[@]} ; do
-          val=(`${ASADMIN_CMD} -e list-jvm-options --target ${cluster}${envNum} | grep ${opt}`)
-          if [ -n "${val}" ]; then
-            echo "${count} : ${val}"
-            arrayRes[${count}]=$(echo ${val} | sed -e 's/\-/\\-/' -e 's/\:/\\:/')
-            count=$(( count + 1 ))
-          fi
-        done
-        lineF
-        question "`getCaption $cmd`します。削除${CHK_MSG_8}" "0" "alpha"
-        if isNumeric ${ans}; then
-          if [ ${ans} -lt ${#arrayOpt[@]} ]; then
-            target=${ans}
-            question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-            if [ ${ans} == "yes" ]; then
-              logDebug "${SCRIPT_HOME}/14_jvmSetting.sh -c delete -a ${envNum} -i ${cluster} -t ${arrayRes[${target}]}"
-              ${SCRIPT_HOME}/14_jvmSetting.sh -c delete -a ${envNum} -i ${cluster} -t "${arrayRes[${target}]}"
-              line2 "$cmd"
-              count=0
-              arrayOpt=("\\-XX\\:MaxPermSize" "\\-XX\\:PermSize" "\\-Xmx" "\\-Xms" "\\-verbose" "\\-Dcntjndi")
-              for opt in ${arrayOpt[@]} ; do
-                val=(`${ASADMIN_CMD} -e list-jvm-options --target ${cluster}${envNum} | grep ${opt}`)
-                if [ -n "${val}" ]; then
-                  echo "${count} : ${val}"
-                  arrayRes[${count}]=$(echo ${val} | sed -e 's/\-/\\-/' -e 's/\:/\\:/')
-                  count=$(( count + 1 ))
-                 fi
-              done
-              lineF 
-            else
-              echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-            fi
-          else
-            echoNl 2 "範囲外の数値が入力されました。`getCaption ${cmd}`を中止します。"
-          fi
-        else
-          echoNl 2 "不正な値が入力されました。`getCaption ${cmd}`を中止します。"
-        fi
-      fi
-    else
-      echoNl 2 "認識されないクラスタIDが入力されました。\\nクラスタIDは[ ${CLUSTERS[@]} ]の中から入力してください。\\n
-`getCaption ${cmd}`を中止します。"
-    fi
-  else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
-  fi
-
-  logDebug "Method $cmd() Ended!"
-}
-
-# ----------------------------------------------------------------
-# CREATE JVM RESOURCE.
-# ----------------------------------------------------------------
-# return   N/A
-# ----------------------------------------------------------------
-set_jvm_resource() {
-  logDebug "Method $cmd() Started!"
-
-  cluster=""
-  envNum=""
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    question "`getCaption $cmd`します。${CHK_MSG_2}" "${CLUSTERS[0]}" "alpha"
-    if [ -n ${ans} ]; then
-      if printf '%s\n' "${CLUSTERS[@]}" | grep -qx "${ans}" > /dev/null >&2; then
-        cluster=${ans}
-        arrayOpt=()
-        line2 "$cmd"
-        count=0
-        arrayPost=("\\-XX\\:MaxPermSize=@m" "\\-XX\\:PermSize=@m" "\\-Xmx@m" "\\-Xms@m" "\\-verbose\\:@" "\\-Dcntjndi=jdbc/@" "\\-Dofsjndi=jdbc/@")
-        arrayOpt=("\\-XX\\:MaxPermSize" "\\-XX\\:PermSize" "\\-Xmx" "\\-Xms" "\\-verbose" "\\-Dcntjndi" "\\-Dofsjndi")
-        
-        for opt in ${arrayOpt[@]} ; do
-            echo "${count} : ${opt}"
-            count=$(( count + 1 ))
-        done
-        lineF
-        question "`getCaption $cmd`します。作成${CHK_MSG_8}" "0" "alpha"
-        if isNumeric ${ans}; then
-          if [ ${ans} -lt ${#arrayOpt[@]} ]; then
-            target=${ans}
-            question "`getCaption $cmd`します。${CHK_MSG_7}" "10" "alpha"
-            val=${ans}
-            target=$(echo ${arrayPost[${target}]} | sed -e "s/\@/${val}/")
-            question "`getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-            if [ ${ans} == "yes" ]; then
-              logDebug "${SCRIPT_HOME}/14_jvmSetting.sh -c set -a ${envNum} -i ${cluster} -t ${target}"
-              ${SCRIPT_HOME}/14_jvmSetting.sh -c set -a ${envNum} -i ${cluster} -t "${target}"
-              line2 "$cmd"
-              count=0
-              arrayOpt=("\\-XX\\:MaxPermSize" "\\-XX\\:PermSize" "\\-Xmx" "\\-Xms" "\\-verbose" "\\-Dcntjndi")
-              for opt in ${arrayOpt[@]} ; do
-                val=(`${ASADMIN_CMD} -e list-jvm-options --target ${cluster}${envNum} | grep ${opt}`)
-                if [ -n "${val}" ]; then
-                  echo "${count} : ${val}"
-                  arrayRes[${count}]=$(echo ${val} | sed -e 's/\-/\\-/' -e 's/\:/\\:/')
-                  count=$(( count + 1 ))
-                 fi
-              done
-              lineF
-            else
-              echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-            fi
-          else
-            echoNl 2 "範囲外の数値が入力されました。`getCaption ${cmd}`を中止します。"
-          fi
-        else
-          echoNl 2 "不正な値が入力されました。`getCaption ${cmd}`を中止します。"
-        fi
-      fi
-    else
-      echoNl 2 "認識されないクラスタIDが入力されました。\\nクラスタIDは[ ${CLUSTERS[@]} ]の中から入力してください。\\n
-`getCaption ${cmd}`を中止します。"
-    fi
-  else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
-  fi
-
-  logDebug "Method $cmd() Ended!"
-}
-
-# ----------------------------------------------------------------
-# LIST JNDI.
-# ----------------------------------------------------------------
-# return   N/A
-# ----------------------------------------------------------------
-list_jndi() {
-
-  logDebug "Method $cmd() Started!"
-
-  cluster=""
-  envNum=""
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    question "`getCaption $cmd`します。${CHK_MSG_2}" "${CLUSTERS[0]}" "alpha"
-    if [ -n ${ans} ]; then
-      if printf '%s\n' "${CLUSTERS[@]}" | grep -qx "${ans}" > /dev/null >&2; then
-        cluster=${ans}
-        arrayRes=()
-        line2 "$cmd"
-        count=0
-        arrayDs=(`${ASADMIN_CMD} -e list-jdbc-connection-pools | sed -e '1d' | sed -e '$d' | grep ${envNum}`)
-        for ds in ${arrayDs[@]} ; do
-          echo "${count} : ${ds}"
-          count=$(( count + 1 ))
-        done
-        question "`getCaption $cmd`します。${CHK_MSG_5}" "0" "alpha"
-        if isNumeric ${ans}; then
-          if [ ${ans} -lt ${#arrayDs[@]} ]; then
-            target=${ans}
-            val=jdbc/${cluster:3:4}${arrayDs[${target}]:10:3}${envNum}
-            question "[ ${val} ] `getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-            if [ ${ans} == "yes" ]; then
-              logDebug "${SCRIPT_HOME}/14_jvmSetting.sh -c list_jndi -a ${envNum} -i ${cluster} -t ${arrayDs[${target}]} ${val}"
-              ${SCRIPT_HOME}/14_jvmSetting.sh -c list_jndi -a ${envNum} -i ${cluster} -t "${arrayDs[${target}]} ${val}"
-           else
-              echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-            fi
-          else
-            echoNl 2 "範囲外の数値が入力されました。`getCaption ${cmd}`を中止します。"
-          fi
-        else
-          echoNl 2 "数値以外が入力されました。`getCaption ${cmd}`を中止します。"
-        fi
-      fi
-    else
-      echoNl 2 "認識されないクラスタIDが入力されました。\\nクラスタIDは[ ${CLUSTERS[@]} ]の中から入力してください。\\n
-`getCaption ${cmd}`を中止します。"
-    fi
-  else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
-  fi
-
-  logDebug "Method $cmd() Ended!"
-
-}
-# ----------------------------------------------------------------
-# CREATE JNDI.
-# ----------------------------------------------------------------
-# return   N/A
-# ----------------------------------------------------------------
-create_jndi() {
-
-  logDebug "Method $cmd() Started!"
-
-  cluster=""
-  envNum=""
-  question "`getCaption $cmd`します。${CHK_MSG_1}" "11" "alpha"
-  if [[ "${ans}" == [0-9][0-5] ]]; then
-    envNum=${ans}
-    question "`getCaption $cmd`します。${CHK_MSG_2}" "${CLUSTERS[0]}" "alpha"
-    if [ -n ${ans} ]; then
-      if printf '%s\n' "${CLUSTERS[@]}" | grep -qx "${ans}" > /dev/null >&2; then
-        cluster=${ans}
-        arrayRes=()
-        line2 "$cmd"
-        count=0
-        arrayDs=(`${ASADMIN_CMD} -e list-jdbc-connection-pools | sed -e '1d' | sed -e '$d' | grep ${envNum}`)
-        for ds in ${arrayDs[@]} ; do
-          echo "${count} : ${ds}"
-          count=$(( count + 1 ))
-        done
-        question "`getCaption $cmd`します。接続${CHK_MSG_5}" "0" "alpha"
-        if isNumeric ${ans}; then
-          if [ ${ans} -lt ${#arrayDs[@]} ]; then
-            target=${ans}
-            val=jdbc/${cluster:3:4}${arrayDs[${target}]:10:3}${envNum}
-            question "[ ${val} ] `getCaption $cmd`します。${CHK_MSG_3}" "yes" "yesNo"
-            if [ ${ans} == "yes" ]; then
-              logDebug "${SCRIPT_HOME}/14_jvmSetting.sh -c create_jndi -a ${envNum} -i ${cluster} -t ${arrayDs[${target}]} ${val}"
-              ${SCRIPT_HOME}/14_jvmSetting.sh -c create_jndi -a ${envNum} -i ${cluster} -t "${arrayDs[${target}]} ${val}"
-           else
-              echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
-            fi
-          else
-            echoNl 2 "範囲外の数値が入力されました。`getCaption ${cmd}`を中止します。"
-          fi
-        else
-          echoNl 2 "数値以外が入力されました。`getCaption ${cmd}`を中止します。"
-        fi
-      fi
-    else
-      echoNl 2 "認識されないクラスタIDが入力されました。\\nクラスタIDは[ ${CLUSTERS[@]} ]の中から入力してください。\\n
-`getCaption ${cmd}`を中止します。"
-    fi
-  else
-    echoNl 2 "01-15以外が入力されました。`getCaption ${cmd}`を中止します。"
-  fi
-
-  logDebug "Method $cmd() Ended!"
-
 }
 
 # ----------------------------------------------------------------
