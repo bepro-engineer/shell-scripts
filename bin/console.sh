@@ -79,6 +79,8 @@ doMenu() {
   else
     echoNl 2 "無効な番号です。"
   fi
+  echo
+  read -r -p "Enterキーでメニューに戻ります..." _
 }
 setLANG     utf-8
 runAs root "$@"
@@ -336,6 +338,7 @@ getCluster
 step="main"
 while true; do
   cd $menudir
+  clear 2>/dev/null
   echo -e "\\n                              created by bepro"
   lineS "S"
   echo -e "実行環境：`hostname -s` IP：`hostname -I | cut -f1 -d' '`"
