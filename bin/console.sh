@@ -23,6 +23,16 @@
 # ------------------------------------------------------------------
 . "$(dirname "$0")/../com/utils.shrc"
 . "$(dirname "$0")/../com/logger.shrc"
+
+# 旧バージョンの共通ライブラリ互換ラッパー(現行logger.shrcの logOut/DEFAULT_LOG_MODE に合わせる)
+logError() { logOut "ERROR" "$*"; }
+logDebug() { logOut "DEBUG" "$*"; }
+setLogMode() {
+  case "$1" in
+    standard|"") DEFAULT_LOG_MODE="CONSOLE" ;;
+    *) DEFAULT_LOG_MODE="$1" ;;
+  esac
+}
 setLANG     utf-8
 runAs root "$@"
 
@@ -77,33 +87,33 @@ lineF (){
 # ----------------------------------------------------------
 getCluster() {
   case "${hostname}" in
-    k2vsgam001)
-    line "# 提携サイト向けGWサーバ#1"
-    CLUSTERS=("CLUSSJY" "CLUSSKD" "CLUSSSM" "CLUSSSB" "CLUSSJB" "CLUSSRS")
+    env01)
+    line "# 環境1サーバ#1"
+    CLUSTERS=("CLU01A" "CLU01B" "CLU01C" "CLU01D" "CLU01E" "CLU01F")
       ;;
-    k2vsgcm001)
-    line "コンビニ向けGWサーバ#1"
-    CLUSTERS=("CLUSSFM" "CLUSSSE")
+    env02)
+    line "環境2サーバ#1"
+    CLUSTERS=("CLU02A" "CLU02B")
       ;;
-    k2vbjgm001)
-    line "業務支援WebAP･くじ情報連携サーバ#1"
-    CLUSTERS=("CLUBSAP" "CLULTJL")
+    env03)
+    line "環境3サーバ#1"
+    CLUSTERS=("CLU03A" "CLU03B")
       ;;
-    k2vowam001)
-    line "販売系AP･パートナー向けWebAPサーバ#1"
-    CLUSTERS=("CLUOSAP" "CLUPIAP" "CLULTOL" "CLUPAAP")
+    env04)
+    line "環境4サーバ#1"
+    CLUSTERS=("CLU04A" "CLU04B" "CLU04C" "CLU04D")
       ;;
-    k2voswm001)
-    line "販売系Web･メディア向け情報提供サーバ#1"
-    CLUSTERS=("CLUOSPC" "CLUOSSP" "CLUOSVT" "CLUOSIF")
+    env05)
+    line "環境5サーバ#1"
+    CLUSTERS=("CLU05A" "CLU05B" "CLU05C" "CLU05D")
       ;;
-    k2vstnm001)
-    line "発番サーバ#1"
-    CLUSTERS=("CLUTNAP")
+    env06)
+    line "環境6サーバ#1"
+    CLUSTERS=("CLU06A")
       ;;
-    vm-ir8x-p420171)
+    dev01)
     line "開発サーバ#1"
-    CLUSTERS=("CLUSSFM" "CLUSSSE")
+    CLUSTERS=("CLU01A" "CLU01B")
       ;;
   esac
 }
