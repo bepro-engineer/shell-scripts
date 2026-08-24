@@ -89,7 +89,7 @@ doMenu() {
   local grp=0
   while true; do
     clear 2>/dev/null
-    echo -e "\n                              created by Paralles Reaction"
+    echo -e "\n          created by Paralles Reaction"
     lineS "S"
     echo -e "実行環境：`hostname -s` IP：`hostname -I | cut -f1 -d' '`"
     lineS "S"
