@@ -58,29 +58,86 @@ question() {
   esac
 }
 initPlatform() { :; }
+
+# menudata(大項目[カテゴリ]見出し + "表示名|関数名"の行)を読み込み、
+# catOrder(カテゴリ表示順)・catItems(カテゴリ名→行一覧)へ展開する。
+loadMenu() {
+  catOrder=()
+  declare -gA catItems
+  local currentCat=""
+  while IFS= read -r line; do
+    case "$line" in
+      \[*\])
+        currentCat="${line#\[}"
+        currentCat="${currentCat%\]}"
+        catOrder+=("$currentCat")
+        catItems["$currentCat"]=""
+        ;;
+      ''|'#'*)
+        :
+        ;;
+      *)
+        if [ -n "$currentCat" ] && [[ "$line" == *"|"* ]]; then
+          catItems["$currentCat"]+="${line}"$'\n'
+        fi
+        ;;
+    esac
+  done < "$menudata"
+}
+
+# サブメニュー(カテゴリ内の機能一覧)を、選択されるまで表示し続ける。
+showSubMenu() {
+  local cat="$1"
+  while true; do
+    clear 2>/dev/null
+    echo -e "\n                              created by bepro"
+    lineS "S"
+    echo -e "実行環境：`hostname -s` IP：`hostname -I | cut -f1 -d' '`"
+    lineS "S"
+    echoNl 1 "  □ ${cat}"
+    echo
+    local i=1
+    declare -A subMap
+    while IFS='|' read -r label func; do
+      [ -z "$label" ] && continue
+      [ -z "$func" ] && continue
+      echo "  ${i}) ${label}"
+      subMap[$i]="$func"
+      i=$((i+1))
+    done <<< "${catItems[$cat]}"
+    echo "  0) 戻る"
+    read -r -p "番号を選択してください: " sel
+    if [ "$sel" = "0" ]; then return; fi
+    local target="${subMap[$sel]}"
+    if [ -n "$target" ]; then
+      cmd="$target"
+      "$target"
+    else
+      echoNl 2 "無効な番号です。"
+    fi
+    echo
+    read -r -p "Enterキーで続行..." _
+  done
+}
+
+# 大項目(カテゴリ)一覧を表示し、選択されたカテゴリのサブメニューへ入る。
 doMenu() {
+  loadMenu
   echo
   local i=1
-  declare -A menuMap
-  while IFS='|' read -r label func; do
-    [ -z "$label" ] && continue
-    [ -z "$func" ] && continue
-    echo "  ${i}) ${label}"
-    menuMap[$i]="$func"
+  for cat in "${catOrder[@]}"; do
+    echo "  ${i}) ${cat}"
     i=$((i+1))
-  done < "$menudata"
+  done
   echo "  0) 終了"
   read -r -p "番号を選択してください: " sel
   if [ "$sel" = "0" ]; then exit 0; fi
-  local target="${menuMap[$sel]}"
-  if [ -n "$target" ]; then
-    cmd="$target"
-    "$target"
+  if [[ "$sel" =~ ^[0-9]+$ ]] && [ "$sel" -ge 1 ] && [ "$sel" -le "${#catOrder[@]}" ]; then
+    showSubMenu "${catOrder[$((sel-1))]}"
   else
     echoNl 2 "無効な番号です。"
+    read -r -p "Enterキーで続行..." _
   fi
-  echo
-  read -r -p "Enterキーでメニューに戻ります..." _
 }
 setLANG     utf-8
 runAs root "$@"
