@@ -33,6 +33,44 @@ setLogMode() {
     *) DEFAULT_LOG_MODE="$1" ;;
   esac
 }
+
+# 旧バージョン互換: メニュー表示・確認プロンプト用ヘルパー(現行utils.shrcには無いため直接定義)
+line() { echo -e "${1}"; }
+lineS() { echo -e "-------------------------------------------------"; }
+echoNl() {
+  local indent="$1"; shift
+  printf "%*s%s\n" "$indent" "" "$*"
+}
+question() {
+  local msg="$1"
+  if confirmAction "${msg} [yes/no]"; then
+    ans="yes"
+  else
+    ans="no"
+  fi
+}
+initPlatform() { :; }
+doMenu() {
+  echo
+  local i=1
+  declare -A menuMap
+  while IFS='|' read -r label func; do
+    [ -z "$label" ] && continue
+    [ -z "$func" ] && continue
+    echo "  ${i}) ${label}"
+    menuMap[$i]="$func"
+    i=$((i+1))
+  done < "$menudata"
+  echo "  0) 終了"
+  read -r -p "番号を選択してください: " sel
+  if [ "$sel" = "0" ]; then exit 0; fi
+  local target="${menuMap[$sel]}"
+  if [ -n "$target" ]; then
+    "$target"
+  else
+    echoNl 2 "無効な番号です。"
+  fi
+}
 setLANG     utf-8
 runAs root "$@"
 
