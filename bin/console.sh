@@ -231,10 +231,14 @@ getCaption() {
 # ----------------------------------------------------------------
 check_service_status() {
   logDebug "Method $cmd() Started!"
-  question "`getCaption $cmd`します。${CHK_MSG_SVC}" "" "alpha"
-  if [ -n "${ans}" ]; then
-    logDebug "${SCRIPT_HOME}/manage_service.sh -s ${ans} -c status"
-    ${SCRIPT_HOME}/manage_service.sh -s "${ans}" -c status
+  local svc="$1"
+  if [ -z "${svc}" ]; then
+    question "`getCaption $cmd`します。${CHK_MSG_SVC}" "" "alpha"
+    svc="${ans}"
+  fi
+  if [ -n "${svc}" ]; then
+    logDebug "${SCRIPT_HOME}/manage_service.sh -s ${svc} -c status"
+    ${SCRIPT_HOME}/manage_service.sh -s "${svc}" -c status
   else
     echoNl 2 "サービス名が入力されませんでした。`getCaption ${cmd}`を中止します。"
   fi
@@ -248,8 +252,11 @@ check_service_status() {
 # ----------------------------------------------------------------
 start_service() {
   logDebug "Method $cmd() Started!"
-  question "`getCaption $cmd`します。${CHK_MSG_SVC}" "" "alpha"
-  local svc="${ans}"
+  local svc="$1"
+  if [ -z "${svc}" ]; then
+    question "`getCaption $cmd`します。${CHK_MSG_SVC}" "" "alpha"
+    svc="${ans}"
+  fi
   if [ -n "${svc}" ]; then
     question "[ ${svc} ] `getCaption $cmd`します。${CHK_MSG_YN}" "yes" "yesNo"
     if [ "${ans}" == "yes" ]; then
@@ -271,8 +278,11 @@ start_service() {
 # ----------------------------------------------------------------
 stop_service() {
   logDebug "Method $cmd() Started!"
-  question "`getCaption $cmd`します。${CHK_MSG_SVC}" "" "alpha"
-  local svc="${ans}"
+  local svc="$1"
+  if [ -z "${svc}" ]; then
+    question "`getCaption $cmd`します。${CHK_MSG_SVC}" "" "alpha"
+    svc="${ans}"
+  fi
   if [ -n "${svc}" ]; then
     question "[ ${svc} ] `getCaption $cmd`します。${CHK_MSG_YN}" "yes" "yesNo"
     if [ "${ans}" == "yes" ]; then
