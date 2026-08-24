@@ -89,7 +89,7 @@ doMenu() {
   local grp=0
   while true; do
     clear 2>/dev/null
-    echo -e "\n                              created by bepro"
+    echo -e "\n                              created by Paralles Reaction"
     lineS "S"
     echo -e "実行環境：`hostname -s` IP：`hostname -I | cut -f1 -d' '`"
     lineS "S"
@@ -382,16 +382,8 @@ getCluster
 # main-routine
 # ----------------------------------------------------------------
 step="main"
-while true; do
-  cd $menudir
-  clear 2>/dev/null
-  echo -e "\\n                              created by bepro"
-  lineS "S"
-  echo -e "実行環境：`hostname -s` IP：`hostname -I | cut -f1 -d' '`"
-  lineS "S"
-  echoNl 1 "  □機能を番号で選択してください "
-  doMenu $*
-done
+cd $menudir
+doMenu $*
 # ----------------------------------------------------------------
 # post-process
 # ----------------------------------------------------------------
