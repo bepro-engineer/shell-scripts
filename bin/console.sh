@@ -59,85 +59,74 @@ question() {
 }
 initPlatform() { :; }
 
-# menudata(大項目[カテゴリ]見出し + "表示名|関数名"の行)を読み込み、
-# catOrder(カテゴリ表示順)・catItems(カテゴリ名→行一覧)へ展開する。
+# menudata(グループ番号|項目ID|コマンド|ラベル の視覚的テーブル)を読み込み、
+# menuRows(各行を"grp|id|command|label"のまま保持する配列)へ展開する。
+# ヘッダ行・区切り線(# で始まる行)・空行は読み飛ばす。
 loadMenu() {
-  catOrder=()
-  declare -gA catItems
-  local currentCat=""
+  menuRows=()
+  local line grp id command label
   while IFS= read -r line; do
     case "$line" in
-      \[*\])
-        currentCat="${line#\[}"
-        currentCat="${currentCat%\]}"
-        catOrder+=("$currentCat")
-        catItems["$currentCat"]=""
-        ;;
-      ''|'#'*)
-        :
-        ;;
-      *)
-        if [ -n "$currentCat" ] && [[ "$line" == *"|"* ]]; then
-          catItems["$currentCat"]+="${line}"$'\n'
-        fi
-        ;;
+      ''|'#'*) continue ;;
     esac
+    IFS='|' read -r grp id command label <<< "$line"
+    grp="$(echo "$grp" | tr -d '[:space:]')"
+    id="$(echo "$id" | tr -d '[:space:]')"
+    command="$(echo "$command" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+    label="$(echo "$label" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+    [ -z "$grp" ] && continue
+    [ -z "$id" ] && continue
+    menuRows+=("${grp}|${id}|${command}|${label}")
   done < "$menudata"
 }
 
-# サブメニュー(カテゴリ内の機能一覧)を、選択されるまで表示し続ける。
-showSubMenu() {
-  local cat="$1"
+# グループ0(トップ)から始め、コマンド列が「自スクリプト名 + グループ番号」の行を
+# 選ぶとそのグループへ遷移、doNormalEndで終了、それ以外は実コマンドとして実行する。
+doMenu() {
+  loadMenu
+  local selfName
+  selfName="$(basename "$0")"
+  local grp=0
   while true; do
     clear 2>/dev/null
     echo -e "\n                              created by bepro"
     lineS "S"
     echo -e "実行環境：`hostname -s` IP：`hostname -I | cut -f1 -d' '`"
     lineS "S"
-    echoNl 1 "  □ ${cat}"
+    echoNl 1 "  □機能を番号で選択してください "
     echo
-    local i=1
-    declare -A subMap
-    while IFS='|' read -r label func; do
-      [ -z "$label" ] && continue
-      [ -z "$func" ] && continue
-      echo "  ${i}) ${label}"
-      subMap[$i]="$func"
-      i=$((i+1))
-    done <<< "${catItems[$cat]}"
-    echo "  0) 戻る"
+    local row rgrp rid rcommand rlabel
+    for row in "${menuRows[@]}"; do
+      IFS='|' read -r rgrp rid rcommand rlabel <<< "$row"
+      [ "$rgrp" = "$grp" ] && echo "  ${rid}) ${rlabel}"
+    done
     read -r -p "番号を選択してください: " sel
-    if [ "$sel" = "0" ]; then return; fi
-    local target="${subMap[$sel]}"
-    if [ -n "$target" ]; then
-      cmd="$target"
-      "$target"
-    else
+    local matched=""
+    for row in "${menuRows[@]}"; do
+      IFS='|' read -r rgrp rid rcommand rlabel <<< "$row"
+      if [ "$rgrp" = "$grp" ] && [ "$rid" = "$sel" ]; then
+        matched="$rcommand"
+        break
+      fi
+    done
+    if [ -z "$matched" ]; then
       echoNl 2 "無効な番号です。"
+      read -r -p "Enterキーで続行..." _
+      continue
     fi
-    echo
-    read -r -p "Enterキーで続行..." _
+    local w0 w1
+    read -r w0 w1 <<< "$matched"
+    if [ "$w0" = "doNormalEnd" ]; then
+      exit 0
+    elif [ "$w0" = "$selfName" ] && [[ "$w1" =~ ^[0-9]+$ ]]; then
+      grp="$w1"
+    else
+      cmd="$w0"
+      $matched
+      echo
+      read -r -p "Enterキーで続行..." _
+    fi
   done
-}
-
-# 大項目(カテゴリ)一覧を表示し、選択されたカテゴリのサブメニューへ入る。
-doMenu() {
-  loadMenu
-  echo
-  local i=1
-  for cat in "${catOrder[@]}"; do
-    echo "  ${i}) ${cat}"
-    i=$((i+1))
-  done
-  echo "  0) 終了"
-  read -r -p "番号を選択してください: " sel
-  if [ "$sel" = "0" ]; then exit 0; fi
-  if [[ "$sel" =~ ^[0-9]+$ ]] && [ "$sel" -ge 1 ] && [ "$sel" -le "${#catOrder[@]}" ]; then
-    showSubMenu "${catOrder[$((sel-1))]}"
-  else
-    echoNl 2 "無効な番号です。"
-    read -r -p "Enterキーで続行..." _
-  fi
 }
 setLANG     utf-8
 runAs root "$@"
