@@ -109,6 +109,23 @@ doMenu() {
         break
       fi
     done
+    # 今の階層に無い番号は、階層をまたいで直接指定されたものとみなし
+    # (例: トップから111を直接入力)、ID一致する行を全体から探す。
+    # ただし戻る/終了番号(9,99,999等)は各グループで使い回すため対象外とし、
+    # 一意に決まらない場合は無効として扱う。
+    if [ -z "$matched" ]; then
+      local jumpMatch="" jumpCount=0
+      for row in "${menuRows[@]}"; do
+        IFS='|' read -r rgrp rid rcommand rlabel <<< "$row"
+        if [ "$rid" = "$sel" ] && [[ "$rcommand" != "doNormalEnd" ]] && [[ "$rcommand" != "${selfName} "* ]]; then
+          jumpMatch="$rcommand"
+          jumpCount=$((jumpCount + 1))
+        fi
+      done
+      if [ "$jumpCount" -eq 1 ]; then
+        matched="$jumpMatch"
+      fi
+    fi
     if [ -z "$matched" ]; then
       echoNl 2 "無効な番号です。"
       read -r -p "Enterキーで続行..." _
