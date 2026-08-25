@@ -93,7 +93,7 @@ doMenu() {
     lineS "S"
     echo -e "実行環境：`hostname -s` IP：`hostname -I | cut -f1 -d' '`"
     lineS "S"
-    echoNl 1 "  □機能を番号で選択してください "
+    echoNl 1 " □ 機能を番号で選択してください "
     echo
     local row rgrp rid rcommand rlabel
     for row in "${menuRows[@]}"; do
