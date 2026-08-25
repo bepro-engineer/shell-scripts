@@ -221,8 +221,8 @@ installLetsEncryptCert() {
         return 1
     fi
 
-    # certbotのインストール
-    if ! command -v certbot >/dev/null 2>&1; then
+    # certbotのインストール(本体・Apacheプラグイン双方の有無を確認する)
+    if ! command -v certbot >/dev/null 2>&1 || ! rpm -q python3-certbot-apache >/dev/null 2>&1; then
         logOut "INFO" "certbot をインストールします。"
         dnf install -y epel-release
         dnf install -y certbot python3-certbot-apache
@@ -494,6 +494,11 @@ EOS
   line "9.Let's Encrypt を用いたSSL証明書の取得"
   logOut "INFO" "Let's Encrypt を用いたSSL証明書の取得とApacheへの組み込み"
   installLetsEncryptCert "$DOMAIN" "$EMAIL"
+  if [ $? -ne 0 ]; then
+    logOut "ERROR" "SSL証明書の取得に失敗したため処理を中止します。"
+    rc=`expr ${rc} + ${JOB_ER}`
+    exitLog ${rc}
+  fi
 	#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 	# 10.Apache/httpd用のopen file limitが更新確認
 	#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
@@ -569,8 +574,9 @@ EOS
 	#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 	line "12.サービスを再起動します。"
 	systemctl restart httpd
+	restart_rc=$?
 	sleep 1
-	if [ $? -ne 0 ]; then
+	if [ ${restart_rc} -ne 0 ]; then
 	  logOut "ERROR" "Apache(httpd)の再起動${ER02_MSG} [ httpd ]"
 	  rc=`expr ${rc} + ${JOB_ER}`
 	  exitLog ${rc}
