@@ -144,15 +144,10 @@ writeLog() {
   local message="$*"
 
   if (( LOG_LEVEL_PRIORITY["${level}"] >= LOG_LEVEL_PRIORITY["${LOG_LEVEL}"] )); then
-    local _fmt="${LOG_FORMAT}"
     local _ts; _ts="$(date +"%Y-%m-%d %H:%M:%S")"
-    local _scope="${scope//\\/\\\\}"
-    local _msg="${message//\\/\\\\}"
-    _fmt="${_fmt/\%s/${_ts}}"
-    _fmt="${_fmt/\%s/${level}}"
-    _fmt="${_fmt/\%s/${_scope}}"
-    _fmt="${_fmt/\%s/${_msg}}"
-    local formatted_message="${_fmt}"
+    local formatted_message
+    # shellcheck disable=SC2059
+    formatted_message="$(printf "${LOG_FORMAT}" "${_ts}" "${level}" "${scope}" "${message}")"
 
     case "${DEFAULT_LOG_MODE}" in
       "FILE") echo "${formatted_message}" >> "${LOG_PATH}/${SCRIPT_NAME%%.*}.log" ;;
