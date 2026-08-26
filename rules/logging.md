@@ -6,13 +6,13 @@
 
 ## ログ出力ルール
 
-- ログ出力は必ず `logOut` を使用する
-- `logInfo` や `logError` などの独自略称関数は使用しない
+- ログ出力はレベル別の専用関数(`logDebug` / `logInfo` / `logWarn` / `logError` / `logFatal`)を使用する
+- 内部実装の `writeLog` を呼び出し側から直接使用しない
 - 形式は必ず以下とする
 
-  logOut "INFO" "message"
-  logOut "WARN" "message"
-  logOut "ERROR" "message"
+  logInfo "message"
+  logWarn "message"
+  logError "message"
 
 - 実行ファイル系 Shell Script では、前処理で必ず `startLog` を呼び出す
 - `startLog` は引数解析完了後、主処理開始前に1回だけ呼び出す

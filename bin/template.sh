@@ -133,10 +133,10 @@ temp_list="\$TEMPLATE_FILE"  # 作成された設定ファイルを temp_list �
 
 startLog
 
-logOut "INFO" args: ["\$@"]
+logInfo args: ["\$@"]
 
 if acquireLock; then
-  logOut "INFO" successfully locked.
+  logInfo successfully locked.
 else
   abort could not acquire lock.
 fi
@@ -151,17 +151,17 @@ scope="main"
 
 # 設定ファイルが存在するか確認
 if [ ! -f "\$temp_list" ]; then
-    logOut "ERROR" "Configuration file not found: \$temp_list"
+    logError "Configuration file not found: \$temp_list"
     exitLog \$JOB_ER
 fi
 
 # Loop processing of target worth.
 sed '/^#/d;/^[[:blank:]]*$/d' "\$temp_list" | while IFS= read -r line; do
     echo "DEBUG: Line read - [\$line]"
-    logOut "DEBUG" "Loop started turn of [ \$line ]."
+    logDebug "Loop started turn of [ \$line ]."
 
     if [ \$? -ne 0 ]; then
-        logOut "ERROR" "Failed to [ \$line ]."
+        logError "Failed to [ \$line ]."
         exitLog \$JOB_ER
     fi
 done

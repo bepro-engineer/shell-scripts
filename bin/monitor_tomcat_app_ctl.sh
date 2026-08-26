@@ -115,7 +115,7 @@ validateArgs() {
     fi
 
     if [ -z "$BASE_URL" ] || [ -z "$CONTEXT_NAME" ] || [ -z "$CMD" ]; then
-        logOut "ERROR" "Missing required arguments. base=[$BASE_URL] context=[$CONTEXT_NAME] cmd=[$CMD]"
+        logError "Missing required arguments. base=[$BASE_URL] context=[$CONTEXT_NAME] cmd=[$CMD]"
         usage
         exitLog 1
     fi
@@ -124,7 +124,7 @@ validateArgs() {
         start|stop|status)
             ;;
         *)
-            logOut "ERROR" "Invalid command. cmd=[$CMD]"
+            logError "Invalid command. cmd=[$CMD]"
             usage
             exitLog 1
             ;;
@@ -148,7 +148,7 @@ resolveUnit() {
             UNIT_PREFIX="monitor_tomcat_app_batch@"
             ;;
         *)
-            logOut "ERROR" "Unsupported base url (port). base=[$BASE_URL] (expected :8080 or :8081)"
+            logError "Unsupported base url (port). base=[$BASE_URL] (expected :8080 or :8081)"
             exitLog 1
             ;;
     esac
@@ -200,16 +200,16 @@ checkContextExists() {
     curl_rc=$?
 
     if [ "$curl_rc" -ne 0 ]; then
-        logOut "ERROR" "Context precheck failed (curl error). url=[$url] curl_rc=[$curl_rc] http_code=[$http_code]"
+        logError "Context precheck failed (curl error). url=[$url] curl_rc=[$curl_rc] http_code=[$http_code]"
         exitLog 2
     fi
 
     if [ "$http_code" = "200" ] || [ "$http_code" = "302" ]; then
-        logOut "INFO" "Context precheck OK. url=[$url] http_code=[$http_code]"
+        logInfo "Context precheck OK. url=[$url] http_code=[$http_code]"
         return 0
     fi
 
-    logOut "ERROR" "Context not found. url=[$url] http_code=[$http_code]"
+    logError "Context not found. url=[$url] http_code=[$http_code]"
     exitLog 2
 }
 
@@ -247,7 +247,7 @@ checkUnitExists() {
     load_state="$(systemctl show "$UNIT" -p LoadState --value 2>/dev/null)"
 
     if [ "$load_state" = "not-found" ] || [ -z "$load_state" ]; then
-        logOut "ERROR" "Unit not found. unit=[$UNIT]"
+        logError "Unit not found. unit=[$UNIT]"
         exitLog 2
     fi
 
@@ -271,13 +271,13 @@ resolveUnit
 # ------------------------------------------------------------------
 scope="main"
 
-logOut "INFO" "Execute unit control. cmd=[$CMD] unit=[$UNIT] base=[$BASE_URL] context=[$CONTEXT_NAME]"
+logInfo "Execute unit control. cmd=[$CMD] unit=[$UNIT] base=[$BASE_URL] context=[$CONTEXT_NAME]"
 
 case "$CMD" in
     start)
         checkUnitExists
         if isUnitActive; then
-            logOut "INFO" "Already running. unit=[$UNIT]"
+            logInfo "Already running. unit=[$UNIT]"
             exitLog 0
         fi
         checkContextExists
@@ -285,7 +285,7 @@ case "$CMD" in
     stop)
         checkUnitExists
         if ! isUnitActive; then
-            logOut "INFO" "Already stopped. unit=[$UNIT]"
+            logInfo "Already stopped. unit=[$UNIT]"
             exitLog 0
         fi
         ;;

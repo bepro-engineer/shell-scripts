@@ -105,28 +105,28 @@ EOF
 # ------------------------------------------------------------------
 checkArgs() {
     if [ $# -lt 3 ]; then
-        logOut "ERROR" "Insufficient arguments."
+        logError "Insufficient arguments."
         usage
         exitLog ${JOB_ER}
     fi
 
     if echo "$1" | grep -q '[*?]' || echo "$2" | grep -q '[*?]'; then
-        logOut "ERROR" "Wildcard characters are not allowed in path."
+        logError "Wildcard characters are not allowed in path."
         exitLog ${JOB_ER}
     fi
 
     if [ ! -d "$1" ]; then
-        logOut "ERROR" "Source directory does not exist: $1"
+        logError "Source directory does not exist: $1"
         exitLog ${JOB_ER}
     fi
 
     if [ ! -d "$2" ]; then
-        logOut "ERROR" "Target directory does not exist: $2"
+        logError "Target directory does not exist: $2"
         exitLog ${JOB_ER}
     fi
 
     if echo "$3" | grep -q '[^01]'; then
-        logOut "ERROR" "Mode must be 0 (copy) or 1 (move): $3"
+        logError "Mode must be 0 (copy) or 1 (move): $3"
         exitLog ${JOB_ER}
     fi
 
@@ -135,7 +135,7 @@ checkArgs() {
     dst_chk="${2#${src_tmp}}"
 
     if [ -z "$dst_chk" ] || [ "$2" != "$dst_chk" ] || [ "${2%/}" = "$src_parent" ]; then
-        logOut "ERROR" "Invalid parent-child directory relationship."
+        logError "Invalid parent-child directory relationship."
         exitLog ${JOB_ER}
     fi
 }
@@ -163,12 +163,12 @@ done
 startLog
 
 if [ "$OPTIND" -eq 1 ]; then
-    logOut "ERROR" "No arguments provided."
+    logError "No arguments provided."
     usage
     exitLog ${JOB_ER}
 fi
 
-logOut "DEBUG" "src=$src_dir, dst=$dst_dir, mode=$mode"
+logDebug "src=$src_dir, dst=$dst_dir, mode=$mode"
 trap "terminate" HUP INT QUIT TERM
 
 # Check the validity of the argument.
@@ -183,23 +183,23 @@ src_base="${src_dir%/}"
 dst_base="${dst_dir%/}/${src_base##*/}"
 tmp_dir="${dst_base}.tmpdir"
 
-logOut "INFO" "Starting rsync to temporary directory: $tmp_dir"
+logInfo "Starting rsync to temporary directory: $tmp_dir"
 rsync --checksum --delete -av "$src_base/" "$tmp_dir/"
 if [ $? -ne 0 ]; then
-    logOut "ERROR" "rsync failed."
+    logError "rsync failed."
     exitLog ${JOB_ER}
 fi
 
 if [ -d "$dst_base" ]; then
-    logOut "INFO" "Removing existing destination: $dst_base"
+    logInfo "Removing existing destination: $dst_base"
     rm -rf "$dst_base/"
 fi
 
-logOut "INFO" "Renaming $tmp_dir to $dst_base"
+logInfo "Renaming $tmp_dir to $dst_base"
 mv -f "$tmp_dir" "$dst_base"
 
 if [ "$mode" -eq 1 ]; then
-    logOut "INFO" "Removing source directory after move: $src_base"
+    logInfo "Removing source directory after move: $src_base"
     rm -rf "$src_base/"
 fi
 
@@ -208,5 +208,5 @@ fi
 # ----------------------------------------------------------
 scope="post"
 
-logOut "INFO" "dirTransfer.sh completed successfully."
+logInfo "dirTransfer.sh completed successfully."
 exitLog ${JOB_OK}

@@ -42,7 +42,7 @@ terminate() {
 # 引数2：記録ファイルパス
 # ------------------------------------------------------------------
 validateFiles() {
-    [ ! -f "$1" ] && logOut "ERROR" "Configuration file not found: $1" && exitLog ${JOB_ER}
+    [ ! -f "$1" ] && logError "Configuration file not found: $1" && exitLog ${JOB_ER}
     [ ! -f "$2" ] && touch "$2"
 }
 
@@ -51,7 +51,7 @@ validateFiles() {
 # 引数1：引数の個数
 # ------------------------------------------------------------------
 validateArgs() {
-    [ "$1" -ne 0 ] && [ "$1" -ne 2 ] && logOut "ERROR" "Invalid number of arguments." && exitLog ${JOB_ER}
+    [ "$1" -ne 0 ] && [ "$1" -ne 2 ] && logError "Invalid number of arguments." && exitLog ${JOB_ER}
 }
 
 # ------------------------------------------------------------------
@@ -60,10 +60,10 @@ validateArgs() {
 scope="pre"
 
 startLog
-logOut "INFO" "args: [ $* ]"
+logInfo "args: [ $* ]"
 
 if acquireLock; then
-    logOut "INFO" "Successfully locked."
+    logInfo "Successfully locked."
 else
     abort "Could not acquire lock."
 fi
@@ -80,7 +80,7 @@ scope="main"
 # 閾値超過回数と比較値を取得
 excess=$(awk '!/^#/ && NF {print $1}' "$mem_list")
 usage_src=$(awk '!/^#/ && NF {gsub(/%/, "", $2); print $2}' "$mem_list")
-logOut "DEBUG" "Usage_src is : $usage_src %"
+logDebug "Usage_src is : $usage_src %"
 
 # 実メモリ使用率取得
 if [ $# -lt 1 ]; then
@@ -91,24 +91,24 @@ else
 fi
 
 usage_act=$(echo "$usage_act" | awk '{printf("%d\n",$1)}')
-logOut "DEBUG" "Usage_act is : $usage_act %"
-logOut "DEBUG" "Exec_date is : $exec_date"
+logDebug "Usage_act is : $usage_act %"
+logDebug "Exec_date is : $exec_date"
 
 # しきい値と比較し、記録ファイルを更新
 if [ "$usage_act" -ge "$usage_src" ]; then
     echo "$usage_act% $exec_date" >> "$mem_record"
-    logOut "WARN" "Memory usage exceeded: $usage_act %"
+    logWarn "Memory usage exceeded: $usage_act %"
 else
     if [ -s "$mem_record" ]; then
         > "$mem_record"
-        logOut "DEBUG" "Cleared alert history: $mem_record"
+        logDebug "Cleared alert history: $mem_record"
     fi
-    logOut "DEBUG" "Memory usage is within normal range."
+    logDebug "Memory usage is within normal range."
 fi
 
 # 超過回数チェック
 exceed_num=$(wc -l < "$mem_record" | tr -d ' ')
-logOut "DEBUG" "Exceed_num is : $exceed_num"
+logDebug "Exceed_num is : $exceed_num"
 
 # 致命的しきい値も確認してログ出力
 if [ "$exceed_num" -ge "$excess" ]; then

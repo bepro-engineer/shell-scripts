@@ -33,7 +33,7 @@ rules/      コーディング規約ドキュメント
 
 | ファイル | 用途 |
 |---|---|
-| `logger.shrc` | ログ制御関数（`logOut` / `startLog` / `exitLog`）を提供する |
+| `logger.shrc` | ログ制御関数（`writeLog` / `logDebug` / `logInfo` / `logWarn` / `logError` / `startLog` / `exitLog`）を提供する |
 | `utils.shrc` | ロック制御・プロセス管理・文字列操作などの共通ユーティリティを提供する |
 
 ### templates/
@@ -55,10 +55,10 @@ rules/      コーディング規約ドキュメント
 ### ログ出力
 
 ```bash
-logOut "INFO"  "message"
-logOut "WARN"  "message"
-logOut "ERROR" "message"
-logOut "DEBUG" "message"
+logInfo  "message"
+logWarn  "message"
+logError "message"
+logDebug "message"
 ```
 
 デフォルトのログ出力先は CONSOLE（標準出力）。`DEFAULT_LOG_MODE="FILE"` に変更するとログファイル（`log/<script_name>.log`）へ書き出す。

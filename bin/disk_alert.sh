@@ -62,7 +62,7 @@ parseArgs() {
 
 # 閾値・記録ファイルのロード
 loadThreshold() {
-    [ ! -f "$threshold_file" ] && logOut "ERROR" "閾値ファイルがありません: $threshold_file" && exitLog ${JOB_ER}
+    [ ! -f "$threshold_file" ] && logError "閾値ファイルがありません: $threshold_file" && exitLog ${JOB_ER}
     [ ! -f "$record_file" ] && touch "$record_file"
 }
 
@@ -84,10 +84,10 @@ if [ -z "$exec_time" ]; then
 fi
 
 startLog
-logOut "INFO" "Args: [-f $usage_file -t $exec_time]"
+logInfo "Args: [-f $usage_file -t $exec_time]"
 
 if acquireLock; then
-    logOut "INFO" "Lock acquired"
+    logInfo "Lock acquired"
 else
     abort "Lock acquisition failed."
 fi
@@ -104,34 +104,34 @@ loadThreshold
 scope="main"
 
 grep -v '^\s*#' "$threshold_file" | while read fs warn_crit warn_thres crit_thres; do
-    logOut "DEBUG" "Checking FS: $fs"
+    logDebug "Checking FS: $fs"
 
     usage_line=$(grep -w "$fs" "$usage_file")
 
     if [ -z "$usage_line" ]; then
-        logOut "WARN" "Filesystem not found in df output: $fs"
+        logWarn "Filesystem not found in df output: $fs"
         continue
     fi
 
     usage_now=$(echo "$usage_line" | awk 'NF >= 2 {print $(NF-1)}' | sed 's/%//')
 
     if [ -z "$usage_now" ]; then
-        logOut "WARN" "Unknown filesystem: $fs"
+        logWarn "Unknown filesystem: $fs"
         continue
     fi
 
-    logOut "INFO" "Usage for $fs = ${usage_now}% / Warn=${warn_thres}% / Crit=${crit_thres}%"
+    logInfo "Usage for $fs = ${usage_now}% / Warn=${warn_thres}% / Crit=${crit_thres}%"
 
     if [ "$usage_now" -ge "$warn_thres" ]; then
         echo "$fs ${usage_now}% $exec_time" >> "$record_file"
-        logOut "WARN" "Usage exceeded: ${usage_now}% for $fs"
+        logWarn "Usage exceeded: ${usage_now}% for $fs"
     else
         grep -vw "$fs" "$record_file" > "${record_file}.tmp" && mv "${record_file}.tmp" "$record_file"
-        logOut "DEBUG" "Usage normal: $fs"
+        logDebug "Usage normal: $fs"
     fi
 
     count_exceed=$(grep -cw "$fs" "$record_file")
-    logOut "INFO" "Exceed count for $fs: $count_exceed / Threshold: $warn_crit"
+    logInfo "Exceed count for $fs: $count_exceed / Threshold: $warn_crit"
 
     if [ "$count_exceed" -ge "$warn_crit" ]; then
         # ------------------------------------------------------

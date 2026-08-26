@@ -100,30 +100,30 @@ EOF
 # ------------------------------------------------------------------
 checkArg() {
     if [ -z "$backup_dir" ]; then
-        logOut "ERROR" "${err_msg01}"
+        logError "${err_msg01}"
         usage
         exitLog ${JOB_ER}
     fi
     if [ ! -d "$backup_dir" ]; then
-        logOut "WARN" "${err_msg02} (${backup_dir})"
+        logWarn "${err_msg02} (${backup_dir})"
         mkdir -p "$backup_dir"
     fi
     if [ ! -w "$backup_dir" ]; then
-        logOut "ERROR" "${err_msg03} (${backup_dir})"
+        logError "${err_msg03} (${backup_dir})"
         exitLog ${JOB_ER}
     fi
     if [ ! -f "$target_list" ]; then
-        logOut "ERROR" "${err_msg04} (${target_list})"
+        logError "${err_msg04} (${target_list})"
         exitLog ${JOB_ER}
     fi
     if [ ! -f "$ignore_list" ]; then
-        logOut "WARN" "${err_msg05} (${ignore_list})"
+        logWarn "${err_msg05} (${ignore_list})"
     fi
 
     # 【追加】ターゲットリスト内のファイルが存在するか確認
     while read line; do
         if [ ! -e "$line" ]; then
-            logOut "ERROR" "${err_msg04}: ${line}"
+            logError "${err_msg04}: ${line}"
             exitLog ${JOB_ER}
         fi
     done < "$target_list"
@@ -141,10 +141,10 @@ checkArg() {
 # 使用箇所　：HUP INT QUIT TERM シグナル受信時の `trap`
 # ------------------------------------------------------------------
 terminate() {
-    logOut "ERROR" "${err_msg08}"
+    logError "${err_msg08}"
     if [ -n "${backup_file}" ] && [ -f "${backup_file}" ]; then
         rm -f "${backup_file}"
-        logOut "WARN" "${warn_msg01}: ${backup_file}"
+        logWarn "${warn_msg01}: ${backup_file}"
     fi
     exitLog ${JOB_ER}
 }
@@ -162,25 +162,25 @@ terminate() {
 # ------------------------------------------------------------------
 executeBackup() {
     date_stamp="$(getCurrentDate)"
-    logOut "DEBUG" "date_stamp=${date_stamp}"
+    logDebug "date_stamp=${date_stamp}"
     backup_file="${backup_dir}/backup_${date_stamp}.tar.gz"
 
-    logOut "INFO" "バックアップ開始: ${backup_file}"
+    logInfo "バックアップ開始: ${backup_file}"
 
     # tar でアーカイブを作成
-    logOut "DEBUG" "tarアーカイブ対象のリスト:"
+    logDebug "tarアーカイブ対象のリスト:"
     cat "${target_list}" | while read line; do
-        logOut "DEBUG" "  - ${line}"
+        logDebug "  - ${line}"
     done
     /bin/tar --exclude-from="${ignore_list}" -czf "${backup_file}" -T "${target_list}"
 
      rc=$?
     if [ $rc -ne $JOB_OK ]; then
-        logOut "ERROR" "${err_msg06}"
+        logError "${err_msg06}"
         terminate
     fi
 
-    logOut "INFO" "バックアップ完了: ${backup_file}"
+    logInfo "バックアップ完了: ${backup_file}"
 }
 
 # ------------------------------------------------------------------
@@ -195,7 +195,7 @@ executeBackup() {
 # 使用箇所　：main-routine
 # ------------------------------------------------------------------
 cleanOldBackups() {
-    find "${backup_dir}" -type f -name "backup_*.tar.gz" -mtime +7 -exec rm {} + || logOut "WARN" "${err_msg07}"
+    find "${backup_dir}" -type f -name "backup_*.tar.gz" -mtime +7 -exec rm {} + || logWarn "${err_msg07}"
 }
 
 # ----------------------------------------------------------

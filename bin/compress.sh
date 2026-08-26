@@ -84,37 +84,37 @@ terminate() {
 # ------------------------------------------------------------------
 checkArgs() {
     if [ -z "$1" ] || [ -z "$2" ]; then
-        logOut "ERROR" "Incorrect number of arguments."
+        logError "Incorrect number of arguments."
         usage
         exitLog ${JOB_ER}
     fi
-    logOut "DEBUG" "arg1 is [ $1 ]."
+    logDebug "arg1 is [ $1 ]."
     if [ ! -e "$1" ]; then
-        logOut "ERROR" "Not found such file or directory [ $1 ]."
+        logError "Not found such file or directory [ $1 ]."
         exitLog ${JOB_ER}
     fi
-    logOut "DEBUG" "arg2 is [ $2 ]."
+    logDebug "arg2 is [ $2 ]."
     if echo "$2" | grep -q '/$'; then
-        logOut "ERROR" "[ $2 ] directory is set as an output file."
+        logError "[ $2 ] directory is set as an output file."
         exitLog ${JOB_ER}
     fi
     if [ ! -e "${2%/*}" ]; then
-        logOut "ERROR" "Not found such file or directory [ ${2%/*} ]."
+        logError "Not found such file or directory [ ${2%/*} ]."
         exitLog ${JOB_ER}
     fi
     if [ -f "$2" ]; then
         rm -rf "$2"
-        logOut "INFO" "Removed the [ $2 ] because the same name dst file exist."
+        logInfo "Removed the [ $2 ] because the same name dst file exist."
     fi
     # Check mode.
-    logOut "DEBUG" "arg3 is [ $3 ]."
+    logDebug "arg3 is [ $3 ]."
     if echo "$3" | grep -Eq "[^01]"; then
-        logOut "ERROR" "An unexpected value [ $3 ]."
+        logError "An unexpected value [ $3 ]."
         exitLog ${JOB_ER}
     fi
     # Check directory parent-child relationship.
     if [ "$3" -eq 1 ] && echo "$2" | grep -q "$1"; then
-        logOut "ERROR" "Correlation error of a parameter."
+        logError "Correlation error of a parameter."
         exitLog ${JOB_ER}
     fi
 }
@@ -165,7 +165,7 @@ while getopts s:d:m: opts; do
             mode=$OPTARG
             ;;
         *)
-            logOut "ERROR" "Illegal option."
+            logError "Illegal option."
             usage
             exitLog ${JOB_ER}
             ;;
@@ -180,7 +180,7 @@ mode=${mode:-"0"}
 checkArgs "$src_path" "$dst_file" "$mode"
 
 startLog
-logOut "INFO" "args: [ $* ]"
+logInfo "args: [ $* ]"
 
 case "$os" in
     AIX)
@@ -221,9 +221,9 @@ fi
 
 # 成否判定
 if [ "$tar_rc" -eq 0 ] && [ "$zstd_rc" -eq 0 ]; then
-    logOut "INFO" "Succeeded in compression [ $dst_file ]."
+    logInfo "Succeeded in compression [ $dst_file ]."
 else
-    logOut "ERROR" "Failed to compression [ $dst_file ]."
+    logError "Failed to compression [ $dst_file ]."
     rm -f "$dst_file"
     exitLog ${JOB_ER}
 fi

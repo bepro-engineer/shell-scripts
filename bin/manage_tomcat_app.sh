@@ -100,7 +100,7 @@ EOF
 # ------------------------------------------------------------------
 terminate() {
     RC=${JOB_ER}
-    logOut "ERROR" "Terminated by signal."
+    logError "Terminated by signal."
     exitLog ${RC}
 }
 
@@ -123,7 +123,7 @@ callManagerText() {
     curl_rc=$?
 
     if [ $curl_rc -ne 0 ]; then
-        logOut "ERROR" "curl failed. rc=[$curl_rc] url=[$url]"
+        logError "curl failed. rc=[$curl_rc] url=[$url]"
         return 2
     fi
 
@@ -229,16 +229,16 @@ displayAppStatus() {
     rc_local=$?
 
     if [ $rc_local -eq 0 ]; then
-        logOut "INFO" "APP STATUS: ${line}"
+        logInfo "APP STATUS: ${line}"
         return 0
     fi
 
     if [ $rc_local -eq 1 ]; then
-        logOut "WARNING" "APP not found in list: [$app_path]"
+        logWarn "APP not found in list: [$app_path]"
         return 1
     fi
 
-    logOut "ERROR" "Failed to get app status: [$app_path]"
+    logError "Failed to get app status: [$app_path]"
     return 2
 }
 
@@ -262,18 +262,18 @@ startApp() {
     state_rc=$?
 
     if [ $state_rc -eq 0 ] && [ "$state" = "running" ]; then
-        logOut "WARNING" "Already running: [$app_path]"
+        logWarn "Already running: [$app_path]"
         return 1
     fi
 
     out=$(callManagerText "${BASE_URL}${MANAGER_TEXT_PATH}/start?path=${app_path}") || return 2
 
     if echo "$out" | grep -q "^OK"; then
-        logOut "INFO" "Started: [$app_path]"
+        logInfo "Started: [$app_path]"
         return 0
     fi
 
-    logOut "ERROR" "Start failed: [$app_path] resp=[$out]"
+    logError "Start failed: [$app_path] resp=[$out]"
     return 2
 }
 
@@ -297,23 +297,23 @@ stopApp() {
     state_rc=$?
 
     if [ $state_rc -eq 1 ] || [ "$state" = "stopped" ]; then
-        logOut "WARNING" "Already stopped (or not found): [$app_path]"
+        logWarn "Already stopped (or not found): [$app_path]"
         return 1
     fi
 
     if [ $state_rc -eq 2 ]; then
-        logOut "ERROR" "Failed to get current state: [$app_path]"
+        logError "Failed to get current state: [$app_path]"
         return 2
     fi
 
     out=$(callManagerText "${BASE_URL}${MANAGER_TEXT_PATH}/stop?path=${app_path}") || return 2
 
     if echo "$out" | grep -q "^OK"; then
-        logOut "INFO" "Stopped: [$app_path]"
+        logInfo "Stopped: [$app_path]"
         return 0
     fi
 
-    logOut "ERROR" "Stop failed: [$app_path] resp=[$out]"
+    logError "Stop failed: [$app_path] resp=[$out]"
     return 2
 }
 
@@ -406,7 +406,7 @@ processFile() {
     local rc_total=0
 
     if [ ! -f "$file" ]; then
-        logOut "ERROR" "File not found: [$file]"
+        logError "File not found: [$file]"
         return 2
     fi
 
@@ -422,7 +422,7 @@ processFile() {
 
         p=$(normalizePath "$line")
 
-        logOut "INFO" "Processing: cmd=[$cmd] path=[$p]"
+        logInfo "Processing: cmd=[$cmd] path=[$p]"
 
         case "$cmd" in
             status)  displayAppStatus "$p"; rc_local=$? ;;
@@ -463,17 +463,17 @@ while getopts "b:a:f:c:u:p:" opt; do
 done
 
 startLog
-logOut "INFO" "Args: [-b $BASE_URL -a $APP_PATH -f $APP_LIST_FILE -c $CMD -u $MANAGER_USER -p (hidden)]"
+logInfo "Args: [-b $BASE_URL -a $APP_PATH -f $APP_LIST_FILE -c $CMD -u $MANAGER_USER -p (hidden)]"
 trap "terminate" 1 2 3 15
 
 if [ -z "$CMD" ]; then
-    logOut "ERROR" "command が未指定です。（-c）"
+    logError "command が未指定です。（-c）"
     usage
     exitLog ${JOB_ER}
 fi
 
 if [ -z "$MANAGER_USER" ] || [ -z "$MANAGER_PASS" ]; then
-    logOut "ERROR" "Tomcat Manager の user/password が未指定です。（-u と -p）"
+    logError "Tomcat Manager の user/password が未指定です。（-u と -p）"
     usage
     exitLog ${JOB_ER}
 fi
@@ -481,7 +481,7 @@ fi
 case "$CMD" in
     list|status|start|stop|restart) : ;;
     *)
-        logOut "ERROR" "Invalid command: [$CMD]"
+        logError "Invalid command: [$CMD]"
         usage
         exitLog ${JOB_ER}
         ;;
@@ -490,7 +490,7 @@ esac
 # list以外は対象必須（-a か -f のどちらか）
 if [ "$CMD" != "list" ]; then
     if [ -z "$APP_PATH" ] && [ -z "$APP_LIST_FILE" ]; then
-        logOut "ERROR" "対象が未指定です。（-a もしくは -f）"
+        logError "対象が未指定です。（-a もしくは -f）"
         usage
         exitLog ${JOB_ER}
     fi
@@ -498,7 +498,7 @@ fi
 
 # -a と -f の同時指定は禁止（事故防止）
 if [ -n "$APP_PATH" ] && [ -n "$APP_LIST_FILE" ]; then
-    logOut "ERROR" "-a と -f を同時に指定する運用は許可しない。どちらか一方に統一してください。"
+    logError "-a と -f を同時に指定する運用は許可しない。どちらか一方に統一してください。"
     usage
     exitLog ${JOB_ER}
 fi
@@ -515,7 +515,7 @@ scope="main"
 
 case "$CMD" in
     list)
-        logOut "INFO" "Listing applications..."
+        logInfo "Listing applications..."
         out=$(getAppList)
         RC=$?
         if [ $RC -eq 0 ]; then

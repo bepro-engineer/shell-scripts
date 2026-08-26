@@ -114,11 +114,11 @@ EOF
 # 使用箇所　：startMonitor など常駐監視の開始処理
 # ------------------------------------------------------------------
 acquireLock() {
-    logOut "DEBUG" "$0:acquireLock() STARTED !"
+    logDebug "$0:acquireLock() STARTED !"
 
     # ロックディレクトリがなければ作成
     if [ ! -d "$lockD" ]; then
-        logOut "DEBUGG" "ディレクトリを新規作成します。${lockD}"
+        logDebug "ディレクトリを新規作成します。${lockD}"
         mkdir -p "$lockD" || return 1
     fi
 
@@ -136,7 +136,7 @@ acquireLock() {
 
     echo $$ > "$pidfile"
 
-    logOut "DEBUG" "$0:acquireLock() ENDED !"
+    logDebug "$0:acquireLock() ENDED !"
     return 0
 }
 
@@ -186,28 +186,28 @@ releaseLock() {
 # ------------------------------------------------------------------
 checkArgs() {
     if [ -z "${mode}" ]; then
-        logOut "ERROR" "モード(-m)が指定されていません。"
+        logError "モード(-m)が指定されていません。"
         usage
     fi
 
     case "${mode}" in
         start|stop|status|once)
             if [ -z "${unit_name}" ]; then
-                logOut "ERROR" "モード[${mode}]では -u ユニット名が必須です。"
+                logError "モード[${mode}]では -u ユニット名が必須です。"
                 usage
             fi
             ;;
         run)
             if [ -z "${unit_name}" ]; then
-                logOut "ERROR" "モード[run]では -u ユニット名が必須です。"
+                logError "モード[run]では -u ユニット名が必須です。"
                 usage
             fi
             if ! echo "${interval}" | grep -qE '^[0-9]+$'; then
-                logOut "ERROR" "監視間隔(-i)は正の整数で指定してください。"
+                logError "監視間隔(-i)は正の整数で指定してください。"
                 usage
             fi
             if [ "${target}" != "line" ] && [ "${target}" != "mail" ]; then
-                logOut "ERROR" "通知先(-t)は 'line' か 'mail' を指定してください。"
+                logError "通知先(-t)は 'line' か 'mail' を指定してください。"
                 usage
             fi
             ;;
@@ -215,7 +215,7 @@ checkArgs() {
             # listモードは特に必須引数なし
             ;;
         *)
-            logOut "ERROR" "不正なモードが指定されました: ${mode}"
+            logError "不正なモードが指定されました: ${mode}"
             usage
             ;;
     esac
@@ -235,7 +235,7 @@ checkArgs() {
 # ------------------------------------------------------------------
 checkUnitExists() {
     if ! systemctl list-unit-files --type=service --no-legend | awk '{print $1}' | grep -qw "${unit_name}"; then
-        logOut "ERROR" "ユニット [${unit_name}] は存在しません。"
+        logError "ユニット [${unit_name}] は存在しません。"
         exit 1
     fi
 }
@@ -251,18 +251,18 @@ checkUnitExists() {
 # 使用箇所　：main-process（-m run 時）
 # ------------------------------------------------------------------
 runMonitor() {
-    logOut "DEBUG" "$0:runMonitor() STARTED !"
+    logDebug "$0:runMonitor() STARTED !"
     while true; do
         if ! pgrep -f "${unit_name}" > /dev/null 2>&1; then
-            logOut "ERROR" "[${unit_name}] プロセスが停止しています。アラート送信します。"
+            logError "[${unit_name}] プロセスが停止しています。アラート送信します。"
         fi
         
         checkJournald
 
-        logOut "DEBUG" "${interval}"
+        logDebug "${interval}"
         sleep "${interval}"
     done
-    logOut "DEBUG" "$0:runMonitor() ENDED !"
+    logDebug "$0:runMonitor() ENDED !"
 }
 
 # ------------------------------------------------------------------
@@ -277,12 +277,12 @@ runMonitor() {
 # 使用箇所　：-m start
 # ------------------------------------------------------------------
 startMonitor() {
-    logOut "DEBUG" "$0:startMonitor() STARTED !"
+    logDebug "$0:startMonitor() STARTED !"
 
     # acquireLock 成功時のみ進む（1=既に起動中）
     if ! acquireLock "${unit_name}"; then
-        logOut "WARN" "すでに監視が起動中です。"
-        logOut "DEBUG" "$0:startMonitor() ENDED !"
+        logWarn "すでに監視が起動中です。"
+        logDebug "$0:startMonitor() ENDED !"
         exitLog ${JOB_WR}
     fi
 
@@ -290,7 +290,7 @@ startMonitor() {
     prepareDir "${lockD}"
 
     # 監視プロセス起動（バックグラウンド）
-    logOut "DEBUG" "nohup ${BIN_PATH}/${SCRIPT_NAME} -m run -u ${unit_name} -t ${target} -i ${interval} > ${lockD}/nohup.log 2>&1 &"
+    logDebug "nohup ${BIN_PATH}/${SCRIPT_NAME} -m run -u ${unit_name} -t ${target} -i ${interval} > ${lockD}/nohup.log 2>&1 &"
     nohup "${BIN_PATH}/${SCRIPT_NAME}" -m run -u "${unit_name}" -t "${target}" -i "${interval}" > "${lockD}/nohup.log" 2>&1 &
     child_pid=$!
 
@@ -305,15 +305,15 @@ startMonitor() {
     done
 
     if [ -z "${pid}" ]; then
-        logOut "ERROR" "監視プロセスの起動に失敗しました。nohupログを確認してください。"
-        logOut "DEBUG" "$0:startMonitor() ENDED !"
+        logError "監視プロセスの起動に失敗しました。nohupログを確認してください。"
+        logDebug "$0:startMonitor() ENDED !"
         exitLog ${JOB_ER}
     fi
 
     echo "${pid}" > "${pidfile}"
-    logOut "INFO" "監視プロセスを起動しました。PID: ${pid}"
+    logInfo "監視プロセスを起動しました。PID: ${pid}"
 
-    logOut "DEBUG" "$0:startMonitor() ENDED !"
+    logDebug "$0:startMonitor() ENDED !"
 }
 
 # ------------------------------------------------------------------
@@ -329,40 +329,40 @@ startMonitor() {
 # 使用箇所　：send_alert.sh の main-process 内
 # ------------------------------------------------------------------
 stopMonitor() {
-    logOut "DEBUG" "$0:stopMonitor() 開始"
+    logDebug "$0:stopMonitor() 開始"
 
     # ロックディレクトリの存在確認
     if [ ! -d "${lockD}" ]; then
-        logOut "WARN" "監視は実行されていません: ${unit_name}"
+        logWarn "監視は実行されていません: ${unit_name}"
         exitLog ${JOB_WR}
     fi
 
     # PIDファイル存在確認
     if [ ! -f "${pidfile}" ]; then
-        logOut "ERROR" "PIDファイルが存在しません: ${pidfile}"
+        logError "PIDファイルが存在しません: ${pidfile}"
         exitLog ${JOB_ER}
     fi
 
     pid=$(cat "${pidfile}")
 
     if [ -z "${pid}" ]; then
-        logOut "ERROR" "PIDが取得できません: ${pidfile}"
+        logError "PIDが取得できません: ${pidfile}"
         exitLog ${JOB_ER}
     fi
 
     # プロセス稼働確認
     if ps -p "${pid}" >/dev/null 2>&1; then
-        logOut "DEBUG" "kill -9 ${pid}"
+        logDebug "kill -9 ${pid}"
         kill -9 "${pid}" >/dev/null 2>&1
-        logOut "INFO" "監視プロセス(${pid})を終了しました。"
+        logInfo "監視プロセス(${pid})を終了しました。"
     else
-        logOut "WARN" "監視プロセスはすでに存在しません: PID=${pid}"
+        logWarn "監視プロセスはすでに存在しません: PID=${pid}"
     fi
 
     # ロック解除
     releaseLock
 
-    logOut "DEBUG" "$0:stopMonitor() 終了"
+    logDebug "$0:stopMonitor() 終了"
 }
 
 # ------------------------------------------------------------------
@@ -375,24 +375,24 @@ stopMonitor() {
 # 使用箇所　：main-process（-m status 時）
 # ------------------------------------------------------------------
 statusMonitor() {
-    logOut "DEBUG" "$0:statusMonitor() STARTED !"
+    logDebug "$0:statusMonitor() STARTED !"
 
     checkUnitExists
 
     if [ -f "${pidfile}" ]; then
         pid=$(cat "${pidfile}")
         if ps -p "${pid}" > /dev/null 2>&1; then
-            logOut "INFO" "監視プロセスは起動中です。PID: ${pid}"
-            logOut "DEBUG" "$0:statusMonitor() ENDED !"
+            logInfo "監視プロセスは起動中です。PID: ${pid}"
+            logDebug "$0:statusMonitor() ENDED !"
             return 0
         else
-            logOut "INFO" "監視プロセスは停止しています。（PIDファイルのみ存在）"
-            logOut "DEBUG" "$0:statusMonitor() ENDED !"
+            logInfo "監視プロセスは停止しています。（PIDファイルのみ存在）"
+            logDebug "$0:statusMonitor() ENDED !"
             return 1
         fi
     else
-        logOut "INFO" "監視プロセスは起動していません。"
-        logOut "DEBUG" "$0:statusMonitor() ENDED !"
+        logInfo "監視プロセスは起動していません。"
+        logDebug "$0:statusMonitor() ENDED !"
         return 1
     fi
 }
@@ -412,7 +412,7 @@ statusMonitor() {
 # ------------------------------------------------------------------
 
 onceMonitor() {
-    logOut "DEBUG" "$0:onceMonitor() STARTED"
+    logDebug "$0:onceMonitor() STARTED"
 
     checkUnitExists
     # バックグラウンド監視が動いていても強制実行（ロックを取らない）
@@ -421,7 +421,7 @@ onceMonitor() {
     # ロック解除
     releaseLock
 
-    logOut "DEBUG" "$0:onceMonitor() ENDED"
+    logDebug "$0:onceMonitor() ENDED"
 }
 
 # ------------------------------------------------------------------
@@ -441,7 +441,7 @@ onceMonitor() {
 # 使用箇所　：send_alert.sh 内の監視ループや once 実行時
 # ------------------------------------------------------------------
 checkJournald() {
-    logOut "DEBUG" "$0:checkJournald() STARTED"
+    logDebug "$0:checkJournald() STARTED"
 
     exclude_file="/home/bepro/projects/scripts/etc/exclude_patterns_send_alert.conf"
 
@@ -467,22 +467,22 @@ checkJournald() {
     message=$(printf "%s\n%s" "${systemd_logs}" "${logger_logs}" \
         | sed '/^[[:space:]]*$/d' | sort -u | tail -n 200)
 
-    logOut "DEBUG" "MESSAGE:${message}"
+    logDebug "MESSAGE:${message}"
 
     # 検出なし → 復帰扱い（前回内容を消して時刻だけ前進）
     if [ -z "${message}" ]; then
         [ -f "${last_msg_file}" ] && rm -f "${last_msg_file}"
         date +%s > "${since_file}"
-        logOut "DEBUG" "エラーは検出されませんでした。"
-        logOut "DEBUG" "$0:checkJournald() ENDED"
+        logDebug "エラーは検出されませんでした。"
+        logDebug "$0:checkJournald() ENDED"
         return
     fi
 
     # 同一内容は送らない（ただし時刻は前進）
     if [ -f "${last_msg_file}" ] && diff -q "${last_msg_file}" - <<< "${message}" >/dev/null 2>&1; then
         date +%s > "${since_file}"
-        logOut "DEBUG" "同一エラーメッセージのため送信をスキップ"
-        logOut "DEBUG" "$0:checkJournald() ENDED"
+        logDebug "同一エラーメッセージのため送信をスキップ"
+        logDebug "$0:checkJournald() ENDED"
         return
     fi
 
@@ -491,13 +491,13 @@ checkJournald() {
     case "${target}" in
         line) sendToLine "${message}" ;;
         mail) sendToMail "${message}" ;;
-        *)    logOut "ERROR" "通知先が不明: ${target}" ;;
+        *)    logError "通知先が不明: ${target}" ;;
     esac
 
     # 次回用の since（境界落ち防止で -1 秒）
     ts_now="$(date +%s)"; printf "%s\n" "$((ts_now-1))" > "${since_file}"
 
-    logOut "DEBUG" "$0:checkJournald() ENDED"
+    logDebug "$0:checkJournald() ENDED"
 }
 
 # ------------------------------------------------------------------
@@ -511,7 +511,7 @@ checkJournald() {
 # 使用箇所　：main-process（-m list 時）
 # ------------------------------------------------------------------
 listMonitor() {
-    logOut "DEBUG" "$0:listMonitors() STARTED !"
+    logDebug "$0:listMonitors() STARTED !"
 
     local found=0
     for lock_dir in "${TMP_PATH}"/*.lock; do
@@ -524,20 +524,20 @@ listMonitor() {
             local pid
             pid=$(cat "$pidfile")
             if ps -p "$pid" > /dev/null 2>&1; then
-                logOut "INFO" "起動中 (PID: ${pid}) [${unit}] "
+                logInfo "起動中 (PID: ${pid}) [${unit}] "
             else
-                logOut "WARN" "停止中 (PIDファイルあり) [${unit}] "
+                logWarn "停止中 (PIDファイルあり) [${unit}] "
             fi
             found=1
         else
-            logOut "WARN" "PIDファイルなし [${unit}] "
+            logWarn "PIDファイルなし [${unit}] "
             found=1
         fi
     done
 
-    [ $found -eq 0 ] && logOut "INFO" "現在起動中の監視ジョブはありません。"
+    [ $found -eq 0 ] && logInfo "現在起動中の監視ジョブはありません。"
 
-    logOut "DEBUG" "$0:listMonitors() ENDED !"
+    logDebug "$0:listMonitors() ENDED !"
 }
 
 # ------------------------------------------------------------------
@@ -550,15 +550,15 @@ listMonitor() {
 # 使用箇所　：checkJournald
 # ------------------------------------------------------------------
 sendToLine() {
-    logOut "DEBUG" "$0:sendToLine() STARTED !"
+    logDebug "$0:sendToLine() STARTED !"
 
     # 必要な環境変数の確認
     if [ -z "${LINE_CHANNEL_ACCESS_TOKEN}" ]; then
-        logOut "ERROR" "LINE_CHANNEL_ACCESS_TOKEN が未設定です。etc/${host_id}/.env を確認してください。"
+        logError "LINE_CHANNEL_ACCESS_TOKEN が未設定です。etc/${host_id}/.env を確認してください。"
         return 1
     fi
     if [ -z "$1" ]; then
-        logOut "ERROR" "送信メッセージが指定されていません。"
+        logError "送信メッセージが指定されていません。"
         return 1
     fi
 
@@ -573,16 +573,16 @@ sendToLine() {
             -H "Authorization: Bearer ${LINE_CHANNEL_ACCESS_TOKEN}" \
             -H "Content-Type: application/json" \
             -d "${payload}" >/dev/null 2>&1; then
-            logOut "INFO" "[LINE/MessagingAPI] broadcast OK: ${line}"
+            logInfo "[LINE/MessagingAPI] broadcast OK: ${line}"
         else
-            logOut "ERROR" "[LINE/MessagingAPI] broadcast NG: ${line}"
+            logError "[LINE/MessagingAPI] broadcast NG: ${line}"
         fi
 
         # API連投対策
         sleep 0.2
     done
 
-    logOut "DEBUG" "$0:sendToLine() ENDED !"
+    logDebug "$0:sendToLine() ENDED !"
 }
 
 # ------------------------------------------------------------------
@@ -595,13 +595,13 @@ sendToLine() {
 # 使用箇所　：checkJournald
 # ------------------------------------------------------------------
 sendToMail() {
-    logOut "DEBUG" "$0:sendToMail() STARTED !"
+    logDebug "$0:sendToMail() STARTED !"
 
-    logOut "INFO" "(MAIL) $1"
+    logInfo "(MAIL) $1"
     echo "$1" | mail -s "[ErrorLog] ${unit_name}" $MAIL_TO
-    logOut "DEBUG" "MAIL_TO:${MAIL_TO}"
+    logDebug "MAIL_TO:${MAIL_TO}"
 
-    logOut "DEBUG" "$0:sendToMail() ENDED !"
+    logDebug "$0:sendToMail() ENDED !"
 }
 
 # ----------------------------------------------------------

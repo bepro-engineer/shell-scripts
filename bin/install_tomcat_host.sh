@@ -91,7 +91,7 @@ checkArgs() {
 # Step 2: 削除モード（erase）
 #====================================================
 erase() {
-    logOut "INFO" "Tomcat関連の削除処理を開始します。"
+    logInfo "Tomcat関連の削除処理を開始します。"
 
     systemctl stop    "${SERVICE_NAME}" 2>/dev/null
     systemctl disable "${SERVICE_NAME}" 2>/dev/null
@@ -104,10 +104,10 @@ erase() {
     rm -rf "${INSTALL_DIR}"
     userdel -r "${TOMCAT_USER}" 2>/dev/null || true
 
-    logOut "INFO" "Java(OpenJDK) を削除します。"
+    logInfo "Java(OpenJDK) を削除します。"
     rpm -qa | grep -E '^java-[0-9]+-openjdk' | xargs -r dnf remove -y
 
-    logOut "INFO" "TomcatとJavaの削除が完了しました。"
+    logInfo "TomcatとJavaの削除が完了しました。"
     exitLog ${JOB_OK}
 }
 
@@ -164,7 +164,7 @@ fi
 # Step 0: 既存インストールの確認
 #====================================================
 if [ -d "${INSTALL_DIR}" ] && [ "${MODE}" != "erase" ]; then
-    logOut "WARNING" "既にTomcatはインストールされています。[ ${INSTALL_DIR} ]"
+    logWarn "既にTomcatはインストールされています。[ ${INSTALL_DIR} ]"
     exitLog ${JOB_OK}
 fi
 
@@ -177,26 +177,26 @@ if command -v java &>/dev/null; then
              | awk '/java.version =/ {split($3,v,"."); print (v[1]=="1")?v[2]:v[1]}')
     if [ "$major" -lt 11 ]; then
         need_java_install=true
-        logOut "INFO" "現在 Java${major}  → Tomcat10 には 11+ が必要なためアップグレードします。"
+        logInfo "現在 Java${major}  → Tomcat10 には 11+ が必要なためアップグレードします。"
     else
-        logOut "INFO" "Java${major} は要件を満たしています。"
+        logInfo "Java${major} は要件を満たしています。"
     fi
 else
     need_java_install=true
-    logOut "INFO" "Java が未インストールのため、OpenJDK${JDK_MAJOR} を導入します。"
+    logInfo "Java が未インストールのため、OpenJDK${JDK_MAJOR} を導入します。"
 fi
 
 if $need_java_install; then
     dnf install -y java-${JDK_MAJOR}-openjdk java-${JDK_MAJOR}-openjdk-devel || {
-        logOut "ERROR" "Java(OpenJDK) のインストールに失敗しました。"
+        logError "Java(OpenJDK) のインストールに失敗しました。"
         exitLog ${JOB_ER}
     }
     java_path=$(alternatives --list | awk '/java-'"${JDK_MAJOR}"'-openjdk.*\/bin\/java/ {print $3; exit}')
     if [ -n "$java_path" ]; then
         alternatives --set java "$java_path"
-        logOut "INFO" "Java${JDK_MAJOR} を既定に設定しました。"
+        logInfo "Java${JDK_MAJOR} を既定に設定しました。"
     else
-        logOut "ERROR" "alternatives に Java が登録されていません。"
+        logError "alternatives に Java が登録されていません。"
         exitLog ${JOB_ER}
     fi
 fi
@@ -204,16 +204,16 @@ fi
 #====================================================
 # Step 2: Tomcatアーカイブ取得
 #====================================================
-logOut "INFO" "Tomcat ${TOMCAT_VER} をダウンロードします。"
+logInfo "Tomcat ${TOMCAT_VER} をダウンロードします。"
 mkdir -p "${TMP_PATH}"
 [ -f "${TOMCAT_TAR}" ] && rm -f "${TOMCAT_TAR}"
 curl -f -L -o "$TOMCAT_TAR" "$TOMCAT_URL"
 rc=$?
 if [ $rc -ne 0 ]; then
-    logOut "ERROR" "Tomcat アーカイブのダウンロードに失敗しました。curlの終了コード: $rc"
+    logError "Tomcat アーカイブのダウンロードに失敗しました。curlの終了コード: $rc"
     exitLog ${JOB_ER}
 fi
-logOut "INFO" "Tomcat を正常にダウンロードしました。[ ${TOMCAT_TAR} ]"
+logInfo "Tomcat を正常にダウンロードしました。[ ${TOMCAT_TAR} ]"
 
 #====================================================
 # Step 3: 展開
@@ -222,7 +222,7 @@ logOut "INFO" "Tomcat を正常にダウンロードしました。[ ${TOMCAT_TA
 mkdir -p "${INSTALL_DIR}"
 tar -xzf "${TOMCAT_TAR}" -C "${INSTALL_DIR}" --strip-components=1
 if [ $? -ne 0 ]; then
-    logOut "ERROR" "Tomcat アーカイブの展開に失敗しました。"
+    logError "Tomcat アーカイブの展開に失敗しました。"
     exitLog ${JOB_ER}
 fi
 
@@ -232,19 +232,19 @@ fi
 if ! id "${TOMCAT_USER}" &>/dev/null; then
     useradd -r -m -U -d "${INSTALL_DIR}" -s /bin/false "${TOMCAT_USER}"
     if [ $? -ne 0 ]; then
-        logOut "ERROR" "Tomcatユーザーの作成に失敗しました。"
+        logError "Tomcatユーザーの作成に失敗しました。"
         exitLog ${JOB_ER}
     fi
-    logOut "INFO" "Tomcatユーザーを作成しました。[ ${TOMCAT_USER} ]"
+    logInfo "Tomcatユーザーを作成しました。[ ${TOMCAT_USER} ]"
 else
-    logOut "INFO" "Tomcatユーザーは既に存在します。[ ${TOMCAT_USER} ]"
+    logInfo "Tomcatユーザーは既に存在します。[ ${TOMCAT_USER} ]"
 fi
 
 #====================================================
 # Step 5: 所有権設定
 #====================================================
 chown -R "${TOMCAT_USER}:${TOMCAT_USER}" "${INSTALL_DIR}"
-logOut "INFO" "Tomcatディレクトリの所有権を設定しました。"
+logInfo "Tomcatディレクトリの所有権を設定しました。"
 
 #====================================================
 # Step 6: ポート抽出
@@ -255,21 +255,21 @@ if [ -z "$PORT" ]; then
     
     if [ -z "$PORT" ]; then
         # 抽出できなかった場合のログ
-        logOut "WARNING" "server.xml からポート番号の抽出に失敗しました。デフォルトの 8080 を使用します。"
+        logWarn "server.xml からポート番号の抽出に失敗しました。デフォルトの 8080 を使用します。"
         PORT=8080  # 抽出できなければ8080をデフォルト
     else
-        logOut "INFO" "server.xml よりポート ${PORT} を抽出しました。"
+        logInfo "server.xml よりポート ${PORT} を抽出しました。"
     fi
 else
     # ポート番号が指定されている場合、そのまま使用
-    logOut "INFO" "指定されたポート番号を使用します。[ ${PORT} ]"
+    logInfo "指定されたポート番号を使用します。[ ${PORT} ]"
 fi
 
 # ポート番号を server.xml に反映
 if [ -n "$PORT" ]; then
     # server.xml 内の <Connector port="8080" を指定されたポート番号に変更
     sed -i "s|<Connector port=\"8080\"|<Connector port=\"$PORT\"|" "${INSTALL_DIR}/conf/server.xml"
-    logOut "INFO" "server.xml のポート番号を ${PORT} に設定しました。"
+    logInfo "server.xml のポート番号を ${PORT} に設定しました。"
 fi
 
 # ===================================================
@@ -305,11 +305,11 @@ EOF
 
 # エラーチェック
 if [ $? -ne 0 ]; then
-    logOut "ERROR" "Tomcatのサービスユニット作成に失敗しました。"
+    logError "Tomcatのサービスユニット作成に失敗しました。"
     exitLog ${JOB_ER}
 fi
 
-logOut "INFO" "Tomcat systemd ユニットファイルを作成しました。[ ${SERVICE_FILE} ]"
+logInfo "Tomcat systemd ユニットファイルを作成しました。[ ${SERVICE_FILE} ]"
 
 #====================================================
 # Step 8: systemd起動＆確認
@@ -320,21 +320,21 @@ systemctl enable "${SERVICE_NAME}"
 systemctl start "${SERVICE_NAME}"
 
 if [ $? -ne 0 ]; then
-    logOut "ERROR" "Tomcatサービスの起動に失敗しました。"
+    logError "Tomcatサービスの起動に失敗しました。"
     exitLog ${JOB_ER}
 fi
 
 sleep 3
 if ! ss -ltnp | grep ":${PORT}" | grep java >/dev/null; then
-    logOut "ERROR" "Tomcatがポート${PORT}で待機していません。起動に失敗した可能性があります。"
+    logError "Tomcatがポート${PORT}で待機していません。起動に失敗した可能性があります。"
     exitLog ${JOB_ER}
 fi
 
-logOut "INFO" "Tomcatサービスを起動しました。[ ポート${PORT} LISTEN 確認済み ]"
+logInfo "Tomcatサービスを起動しました。[ ポート${PORT} LISTEN 確認済み ]"
 # ----------------------------------------------------------
 # post-process （事後処理ロジックを記述する領域）
 # ----------------------------------------------------------
 scope="post"
 
-logOut "INFO" "Tomcat自動インストールスクリプトを正常終了します。"
+logInfo "Tomcat自動インストールスクリプトを正常終了します。"
 exitLog ${rc}

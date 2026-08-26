@@ -95,7 +95,7 @@ scope="main"
 line "1. SELinux を無効化します"
 disable_selinux
 if [ $? -ne 0 ]; then
-	logOut "ERROR" "1. SELinux を無効化に失敗しました。"
+	logError "1. SELinux を無効化に失敗しました。"
 	exitLog ${JOB_ER}
 fi
 
@@ -104,7 +104,7 @@ line "2. タイムゾーンを Asia/Tokyo に設定します"
 timedatectl set-timezone Asia/Tokyo
 timedatectl status
 if [ $? -ne 0 ]; then
-	logOut "ERROR"  "2. タイムゾーン設定に失敗しました"
+	logError  "2. タイムゾーン設定に失敗しました"
 	exitLog ${JOB_ER}
 fi
 
@@ -114,7 +114,7 @@ dnf -y install glibc-langpack-ja
 localectl set-locale LANG=ja_JP.UTF-8
 localectl status
 if [ $? -ne 0 ]; then
-	logOut "ERROR"  "3. ロケール設定に失敗しました"
+	logError  "3. ロケール設定に失敗しました"
 	exitLog ${JOB_ER}
 fi
 
@@ -123,7 +123,7 @@ line "4. ホスト名を ${hostname} に設定します"
 hostnamectl set-hostname "${hostname}"
 hostnamectl status
 if [ $? -ne 0 ]; then
-	logOut "ERROR"  "4. ホスト名設定に失敗しました"
+	logError  "4. ホスト名設定に失敗しました"
 	exitLog ${JOB_ER}
 fi
 
@@ -142,7 +142,7 @@ line "6. rootログインを禁止します"
 sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
 systemctl restart sshd
 if [ $? -ne 0 ]; then
-	logOut "ERROR"  "6. rootログインを禁止設定に失敗しました"
+	logError  "6. rootログインを禁止設定に失敗しました"
 	exitLog ${JOB_ER}
 fi
 
@@ -158,7 +158,7 @@ sysctl -p
 line "8. パッケージのアップデート"
 dnf -y update
 if [ $? -ne 0 ]; then
-	logOut "dnf update 失敗"
+	writeLog "dnf update 失敗"
 	rc=$((rc + JOB_ER))
 	exitLog $rc
 fi
@@ -167,7 +167,7 @@ fi
 line "9. パッケージメタデータを事前にキャッシュします"
 dnf makecache --refresh
 if [ $? -ne 0 ]; then
-	logOut "ERROR"  "9. パッケージメタデータの事前キャッシュに失敗しました"
+	logError  "9. パッケージメタデータの事前キャッシュに失敗しました"
 	exitLog ${JOB_ER}
 fi
 
@@ -175,7 +175,7 @@ fi
 line "10. 開発用パッケージのインストール"
 dnf -y install vim unzip tcpdump net-tools bind-utils curl git rsync lsof zstd
 if [ $? -ne 0 ]; then
-	logOut "ERROR"  "10. 必要パッケージのインストール設定に失敗しました"
+	logError  "10. 必要パッケージのインストール設定に失敗しました"
 	exitLog ${JOB_ER}
 fi
 
@@ -183,7 +183,7 @@ fi
 line "11. chronyd の再起動"
 systemctl restart chronyd
 if ! isProcessAlive "chronyd"; then
-	logOut "chronyd 起動失敗"
+	writeLog "chronyd 起動失敗"
 	rc=$((rc + JOB_ER))
 	exitLog $rc
 fi
@@ -200,9 +200,9 @@ systemctl enable chronyd
 # 12. limits.conf 設定
 line "12. プロセス数上限設定"
 edit_limits_conf
-logOut "limits.conf 編集完了"
+writeLog "limits.conf 編集完了"
 if [ $? -ne 0 ]; then
-	logOut "ERROR"  "12. limits.conf 設定に失敗しました"
+	logError  "12. limits.conf 設定に失敗しました"
 	exitLog ${JOB_ER}
 fi
 
@@ -210,9 +210,9 @@ fi
 line "13. ulimit -n を設定"
 if ! grep -q "ulimit -n 65535" "$init_conf"; then
   echo "ulimit -n 65535" >> "$init_conf"
-  logOut "ulimit 設定追記 [$init_conf]"
+  writeLog "ulimit 設定追記 [$init_conf]"
 else
-  logOut "ulimit は既に設定済み [$init_conf]"
+  writeLog "ulimit は既に設定済み [$init_conf]"
 fi
 
 # 14. sysctl 設定

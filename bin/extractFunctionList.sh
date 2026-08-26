@@ -135,8 +135,8 @@ extractFunctionList() {
   local func_list
   local count
 
-  logOut "DEBUG" "target: ${target_file}"
-  logOut "DEBUG" "抽出開始"
+  logDebug "target: ${target_file}"
+  logDebug "抽出開始"
 
   func_list=$(grep -E '^[[:blank:]]*(function[[:blank:]]+[a-zA-Z_][a-zA-Z0-9_]*([[:blank:]]*\(\))?[[:blank:]]*\{?|[a-zA-Z_][a-zA-Z0-9_]*[[:blank:]]*\(\)[[:blank:]]*\{?)' "${target_file}" \
     | sed 's/^[[:blank:]]*//' \
@@ -152,7 +152,7 @@ extractFunctionList() {
     rc=${JOB_WR}
   fi
 
-  logOut "DEBUG" "抽出終了: ${count}件"
+  logDebug "抽出終了: ${count}件"
 }
 
 # ----------------------------------------------------------
@@ -163,10 +163,10 @@ scope="pre"
 startLog
 trap "terminate" HUP INT QUIT TERM
 
-logOut "DEBUG" "args: [$*]"
+logDebug "args: [$*]"
 
 if acquireLock; then
-  logOut "INFO" "successfully locked."
+  logInfo "successfully locked."
 else
   abort "could not acquire lock."
 fi
@@ -175,14 +175,14 @@ checkArgs "$@"
 case $? in
   1) showUsage; rc=${JOB_OK}; exitLog "${rc}" ;;
   2) case "${1:-}" in
-       -*) logOut "ERROR" "Unknown option: $1" ;;
-       '') logOut "ERROR" "Argument required." ;;
-       *)  logOut "ERROR" "Too many arguments." ;;
+       -*) logError "Unknown option: $1" ;;
+       '') logError "Argument required." ;;
+       *)  logError "Too many arguments." ;;
      esac
      showUsage; rc=${JOB_ER}; exitLog "${rc}" ;;
-  3) logOut "ERROR" "File not found: $1"; rc=${JOB_ER}; exitLog "${rc}" ;;
-  4) logOut "ERROR" "File not readable: $1"; rc=${JOB_ER}; exitLog "${rc}" ;;
-  5) logOut "ERROR" "Unsupported file type: $1"; rc=${JOB_ER}; exitLog "${rc}" ;;
+  3) logError "File not found: $1"; rc=${JOB_ER}; exitLog "${rc}" ;;
+  4) logError "File not readable: $1"; rc=${JOB_ER}; exitLog "${rc}" ;;
+  5) logError "Unsupported file type: $1"; rc=${JOB_ER}; exitLog "${rc}" ;;
 esac
 
 # ----------------------------------------------------------

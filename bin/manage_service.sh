@@ -76,7 +76,7 @@ EOF
 # 処理終了関数
 terminate() {
     rc=${JOB_ER}
-    logOut "ERROR" "Terminated by signal."
+    logError "Terminated by signal."
     exitLog ${rc}
 }
 
@@ -90,9 +90,9 @@ isServiceRunning() {
 displayStatus() {
     local service="$1"
     if isServiceRunning "$service"; then
-        logOut "INFO" "$service is running."
+        logInfo "$service is running."
     else
-        logOut "INFO" "$service is not running."
+        logInfo "$service is not running."
     fi
 }
 
@@ -111,12 +111,12 @@ while getopts "s:c:" opt; do
 done
 
 startLog
-logOut "INFO" "Args: [-s $SERVICE_NAME -c $CMD]"
+logInfo "Args: [-s $SERVICE_NAME -c $CMD]"
 trap "terminate" 1 2 3 15
 
 # 入力チェック
 if [ -z "$SERVICE_NAME" ] || [ -z "$CMD" ]; then
-    logOut "ERROR" "引数が不足しています。"
+    logError "引数が不足しています。"
     usage
     exitLog ${JOB_ER}
 fi
@@ -129,36 +129,36 @@ scope="main"
 case "$CMD" in
     start)
         if isServiceRunning "$SERVICE_NAME"; then
-            logOut "WARNING" "$SERVICE_NAME is already running."
+            logWarn "$SERVICE_NAME is already running."
             rc=${JOB_OK}
         else
-            logOut "INFO" "Starting $SERVICE_NAME..."
+            logInfo "Starting $SERVICE_NAME..."
             systemctl start "$SERVICE_NAME"
             rc=$?
         fi
         ;;
     stop)
         if ! isServiceRunning "$SERVICE_NAME"; then
-            logOut "WARNING" "$SERVICE_NAME is already stopped."
+            logWarn "$SERVICE_NAME is already stopped."
             rc=${JOB_OK}
         else
-            logOut "INFO" "Stopping $SERVICE_NAME..."
+            logInfo "Stopping $SERVICE_NAME..."
             systemctl stop "$SERVICE_NAME"
             rc=$?
         fi
         ;;
     restart)
-        logOut "INFO" "Restarting $SERVICE_NAME..."
+        logInfo "Restarting $SERVICE_NAME..."
         systemctl restart "$SERVICE_NAME"
         rc=$?
         ;;
     graceful)
-        logOut "INFO" "Reloading $SERVICE_NAME..."
+        logInfo "Reloading $SERVICE_NAME..."
         systemctl reload "$SERVICE_NAME"
         rc=$?
         ;;
     graceful-stop)
-        logOut "INFO" "Graceful stop not supported. Falling back to stop..."
+        logInfo "Graceful stop not supported. Falling back to stop..."
         systemctl stop "$SERVICE_NAME"
         rc=$?
         ;;
@@ -166,7 +166,7 @@ case "$CMD" in
         displayStatus "$SERVICE_NAME"
         ;;
     *)
-        logOut "ERROR" "Invalid command: [$CMD]"
+        logError "Invalid command: [$CMD]"
         usage
         exitLog ${JOB_ER}
         ;;

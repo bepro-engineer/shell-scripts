@@ -124,8 +124,8 @@ countStepLines() {
 
   step_count=$(sed '/^[[:blank:]]*#/d;/^[[:blank:]]*$/d' "${target_file}" | wc -l | awk '{print $1}')
 
-  logOut "DEBUG" "target: ${target_file}"
-  logOut "DEBUG" "step count: ${step_count}"
+  logDebug "target: ${target_file}"
+  logDebug "step count: ${step_count}"
   echo "${step_count}"
 }
 
@@ -137,10 +137,10 @@ scope="pre"
 startLog
 trap "terminate" HUP INT QUIT TERM
 
-logOut "DEBUG" "args: [$*]"
+logDebug "args: [$*]"
 
 if acquireLock; then
-  logOut "INFO" "successfully locked."
+  logInfo "successfully locked."
 else
   abort "could not acquire lock."
 fi
@@ -149,12 +149,12 @@ checkArgs "$@"
 case $? in
   1) showUsage; rc=${JOB_OK}; exitLog "${rc}" ;;
   2) case "${1:-}" in
-       -*) logOut "ERROR" "Unknown option: $1" ;;
-       '') logOut "ERROR" "Argument required." ;;
-       *)  logOut "ERROR" "Too many arguments." ;;
+       -*) logError "Unknown option: $1" ;;
+       '') logError "Argument required." ;;
+       *)  logError "Too many arguments." ;;
      esac
      showUsage; rc=${JOB_ER}; exitLog "${rc}" ;;
-  3) logOut "ERROR" "File not found: $1"; rc=${JOB_ER}; exitLog "${rc}" ;;
+  3) logError "File not found: $1"; rc=${JOB_ER}; exitLog "${rc}" ;;
 esac
 
 # ----------------------------------------------------------

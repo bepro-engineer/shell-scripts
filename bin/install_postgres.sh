@@ -36,7 +36,7 @@ terminate() {
 # ----------------------------------------------------------
 checkArgs() {
     if [ -z "$1" ] || [ -z "$2" ]; then
-        logOut "ERROR" "引数が不足しています。使用方法: install_postgres.sh <version> <port>"
+        logError "引数が不足しています。使用方法: install_postgres.sh <version> <port>"
         exit $JOB_ER
     fi
 }
@@ -78,10 +78,10 @@ os=Linux
 temp_list="$TEMPLATE_FILE"
 
 startLog
-logOut "INFO" args: ["$@"]
+logInfo args: ["$@"]
 
 if acquireLock; then
-  logOut "INFO" "ロックを取得しました。"
+  logInfo "ロックを取得しました。"
 else
   abort "ロックの取得に失敗しました。"
 fi
@@ -96,16 +96,16 @@ checkArgs $1 $2
 scope="main"
 
 if [ ! -f "$temp_list" ]; then
-    logOut "ERROR" "設定ファイルが存在しません: $temp_list"
+    logError "設定ファイルが存在しません: $temp_list"
     exitLog $JOB_ER
 fi
 
 sed '/^#/d;/^[[:blank:]]*$/d' "$temp_list" | while IFS= read -r line; do
-    logOut "DEBUG" "処理対象: [$line]"
+    logDebug "処理対象: [$line]"
     # 処理をここに記述
     sleep 1
     if [ $? -ne 0 ]; then
-        logOut "ERROR" "処理失敗: [$line]"
+        logError "処理失敗: [$line]"
         exitLog $JOB_ER
     fi
 done

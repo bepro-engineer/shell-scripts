@@ -111,9 +111,9 @@ EOUSAGE
 # ----------------------------------------------------------
 checkArgs() {
 
-logOut "引数:[ ${1} ${2} ]"
+writeLog "引数:[ ${1} ${2} ]"
   if [ $# -lt 2 ]; then
-    logOut "DEBUG" "引数が正しくありません。[ $@ ]"
+    logDebug "引数が正しくありません。[ $@ ]"
     exitLog ${JOB_ER}
   fi
  
@@ -126,11 +126,11 @@ logOut "引数:[ ${1} ${2} ]"
 erase() {
 
     if isProcessAlive "httpd"; then
-        logOut "DEBUG" "HTTPDのプロセスを停止します。"
+        logDebug "HTTPDのプロセスを停止します。"
         systemctl stop httpd
     fi
 
-    logOut "DEBUG" "HTTPDをアンインストールします。"
+    logDebug "HTTPDをアンインストールします。"
     dnf -y remove $(rpm -qa | grep -E '^httpd|mod_ssl')
     if [ $? -ne 0 ]; then
         rc=`expr ${rc} + ${JOB_ER}` 
@@ -138,12 +138,12 @@ erase() {
     fi
 
     if [ -d /etc/httpd ]; then
-        logOut "DEBUG" "/etc/httpd 配下の設定ファイルを削除します。"
+        logDebug "/etc/httpd 配下の設定ファイルを削除します。"
         find /etc/httpd -type f -exec rm -f {} \;
     fi
 
     if [ -d /etc/systemd/system/httpd.service.d ]; then
-        logOut "DEBUG" "/etc/systemd/system/httpd.service.d を削除します。"
+        logDebug "/etc/systemd/system/httpd.service.d を削除します。"
         rm -f /etc/systemd/system/httpd.service.d/override.conf
         rm -rf /etc/systemd/system/httpd.service.d
     fi
@@ -151,7 +151,7 @@ erase() {
     #===========================
     # systemd キャッシュを完全リセット
     #===========================
-    logOut "DEBUG" "systemd キャッシュを完全リセットします。"
+    logDebug "systemd キャッシュを完全リセットします。"
     systemctl stop httpd 2>/dev/null
     systemctl disable httpd 2>/dev/null
     systemctl reset-failed httpd 2>/dev/null
@@ -162,10 +162,10 @@ erase() {
     # Let's Encrypt の削除処理
     #===========================
     if command -v certbot >/dev/null 2>&1; then
-        logOut "DEBUG" "Let's Encrypt (certbot) が導入されているため、関連リソースを削除します。"
+        logDebug "Let's Encrypt (certbot) が導入されているため、関連リソースを削除します。"
         removeLetsEncryptCert
     else
-        logOut "DEBUG" "certbot が導入されていないため、Let's Encrypt の削除処理はスキップします。"
+        logDebug "certbot が導入されていないため、Let's Encrypt の削除処理はスキップします。"
     fi
 }
 
@@ -217,13 +217,13 @@ installLetsEncryptCert() {
     local cert_path="/etc/letsencrypt/live/${DOMAIN}/fullchain.pem"
 
     if [ -z "$DOMAIN" ] || [ -z "$EMAIL" ]; then
-        logOut "ERROR" "ドメイン名とメールアドレスは必須です。" >&2
+        logError "ドメイン名とメールアドレスは必須です。" >&2
         return 1
     fi
 
     # certbotのインストール(本体・Apacheプラグイン双方の有無を確認する)
     if ! command -v certbot >/dev/null 2>&1 || ! rpm -q python3-certbot-apache >/dev/null 2>&1; then
-        logOut "INFO" "certbot をインストールします。"
+        logInfo "certbot をインストールします。"
         dnf install -y epel-release
         dnf install -y certbot python3-certbot-apache
     fi
@@ -231,12 +231,12 @@ installLetsEncryptCert() {
     # ポート80と443を確認して未開放なら追加、reloadは1回だけ
     local changed=0
     if ! firewall-cmd --list-ports | grep -q '80/tcp'; then
-        logOut "INFO" "ポート80を一時的に開放します。"
+        logInfo "ポート80を一時的に開放します。"
         firewall-cmd --permanent --add-port=80/tcp
         changed=1
     fi
     if ! firewall-cmd --list-ports | grep -q '443/tcp'; then
-        logOut "INFO" "ポート443を一時的に開放します。"
+        logInfo "ポート443を一時的に開放します。"
         firewall-cmd --permanent --add-port=443/tcp
         changed=1
     fi
@@ -245,7 +245,7 @@ installLetsEncryptCert() {
     fi
 
     # certbotが要求する仮のVirtualHost（*:80）を追加
-    logOut "INFO" "Apache に一時的な VirtualHost を追加します（port 80）"
+    logInfo "Apache に一時的な VirtualHost を追加します（port 80）"
     cat << EOF >> "$conf_file"
 ${temp_marker}
 <VirtualHost *:80>
@@ -258,31 +258,31 @@ EOF
     # Apache構文チェックと再起動
     systemctl restart httpd
     if ! httpd -t; then
-        logOut "ERROR" "Apache 設定にエラーがあります（VirtualHost追加後）"
+        logError "Apache 設定にエラーがあります（VirtualHost追加後）"
         return 1
     fi
 
     # certbotで証明書取得
-    logOut "INFO" "Let's Encrypt で証明書を取得します：$DOMAIN"
+    logInfo "Let's Encrypt で証明書を取得します：$DOMAIN"
     if ! certbot --apache -n --agree-tos --email "$EMAIL" -d "$DOMAIN"; then
-        logOut "ERROR" "certbot による証明書取得に失敗しました。"
+        logError "certbot による証明書取得に失敗しました。"
         return 1
     fi
 
     # 証明書の存在確認
     if [ ! -s "$cert_path" ]; then
-        logOut "ERROR" "証明書ファイルが存在しないか空です：$cert_path"
+        logError "証明書ファイルが存在しないか空です：$cert_path"
         return 1
     fi
 
     # 仮VirtualHostの削除
-    logOut "INFO" "一時的に追加した VirtualHost を削除します"
+    logInfo "一時的に追加した VirtualHost を削除します"
     sed -i "/${temp_marker}/,/^# === END TEMP VHOST FOR CERTBOT ===/d" "$conf_file"
 
     systemctl restart httpd
 
     # certbotの自動更新有効化
-    logOut "INFO" "証明書の自動更新を有効化します。"
+    logInfo "証明書の自動更新を有効化します。"
     systemctl enable certbot-renew.timer
 }
 
@@ -292,36 +292,36 @@ EOF
 #====================================================
 removeLetsEncryptCert() {
     # Apache関連パッケージを削除
-    logOut "INFO" "Apache (httpd) を削除します。"
+    logInfo "Apache (httpd) を削除します。"
     dnf remove -y httpd httpd-tools mod_ssl
 
     # certbot と関連パッケージを削除
-    logOut "INFO" "certbot と関連パッケージを削除します。"
+    logInfo "certbot と関連パッケージを削除します。"
     dnf remove -y certbot python3-certbot-apache
 
     # Let's Encrypt の証明書・キャッシュ・ログを削除
-    logOut "INFO" "Let's Encrypt の証明書と設定を削除します。"
+    logInfo "Let's Encrypt の証明書と設定を削除します。"
     rm -rf /etc/letsencrypt
     rm -rf /var/lib/letsencrypt
     rm -rf /var/log/letsencrypt
 
     # Apacheの conf.d ディレクトリにあるバーチャルホスト設定を削除
-    logOut "INFO" "Apache 設定から残っているバーチャルホスト設定を削除します。"
+    logInfo "Apache 設定から残っているバーチャルホスト設定を削除します。"
     rm -f /etc/httpd/conf.d/*.conf
 
     # certbot の自動更新タイマー（systemd）を無効化して削除
-    logOut "INFO" "certbot 関連の systemd タイマーを無効化・削除します。"
+    logInfo "certbot 関連の systemd タイマーを無効化・削除します。"
     systemctl disable --now certbot-renew.timer 2>/dev/null
     systemctl stop certbot-renew.timer 2>/dev/null
     rm -f /etc/systemd/system/timers.target.wants/certbot-renew.timer
 
     # ファイアウォールのポート開放を元に戻す
-   # logOut "INFO" "ファイアウォール設定をクリーンアップします（ポート80/443削除）"
+   # logInfo "ファイアウォール設定をクリーンアップします（ポート80/443削除）"
    # firewall-cmd --remove-port=80/tcp --permanent
    # firewall-cmd --remove-port=443/tcp --permanent
    # firewall-cmd --reload
 
-    logOut "INFO" "削除が完了しました。"
+    logInfo "削除が完了しました。"
 }
 
 # ------------------------------------------------------------------
@@ -352,17 +352,17 @@ scope="main"
 
 if [ "${MODE}" == "erase" ]; then
   if ! erase ; then
-    logOut "INFO" "HTTPD設定の消去${WR02_MSG} 既に削除されています。 [ Httpd ]"
+    logInfo "HTTPD設定の消去${WR02_MSG} 既に削除されています。 [ Httpd ]"
     exitLog ${ERROR}
   fi
-    logOut "INFO" "HTTPD設定の消去${IF02_MSG} [ Httpd ]"
+    logInfo "HTTPD設定の消去${IF02_MSG} [ Httpd ]"
 fi
 sleep 3
 
 if [ -n "${DOMAIN}" ]; then
 	line "httpdの導入状況を確認します。"
 	if isModuleInstall "httpd"; then
-	  logOut "WARN" "${WR01_MSG}"
+	  logWarn "${WR01_MSG}"
 	   exitLog ${JOB_ER}
 	fi
 	#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
@@ -372,23 +372,23 @@ if [ -n "${DOMAIN}" ]; then
 	dnf install -y httpd mod_ssl
 	if [ $? -eq 0 ]; then
 
-	  logOut "INFO" "${IF01_MSG} [ Apache(httpd) ]"
+	  logInfo "${IF01_MSG} [ Apache(httpd) ]"
 	  line "既存の設定ファイルを退避します。"
 	  cp -p "${conf_dir}${httpd_conf}" "${conf_dir}${httpd_conf}.${date}"
 
 	  if [ -f "${conf_dir}${httpd_conf}.${date}" ]; then
-	    logOut "INFO" "ファイルの退避${IF02_MSG} [ ${conf_dir}${httpd_conf}.${date} ]"
+	    logInfo "ファイルの退避${IF02_MSG} [ ${conf_dir}${httpd_conf}.${date} ]"
 	#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 	# 2.httpd.confファイルのServerNameのコメントアウトを外して編集
 	#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 	    line "2.httpd.confファイルのServerNameのコメントアウトを外して編集します。"
 	    if ! editHttpdConf ; then
-	      logOut "ERROR" "ファイルの編集${ER02_MSG} [ ${conf_dir}${httpd_conf} ]"
+	      logError "ファイルの編集${ER02_MSG} [ ${conf_dir}${httpd_conf} ]"
 	      rc=`expr ${rc} + ${JOB_ER}`
 	      exitLog ${rc}
 	    fi
 	    sleep 1
-	    logOut "INFO" "ファイルの編集${IF02_MSG} [ ${conf_dir}${httpd_conf}"
+	    logInfo "ファイルの編集${IF02_MSG} [ ${conf_dir}${httpd_conf}"
 	    echo -e `cat ${conf_dir}${httpd_conf} | grep -v '^\s*#' | grep 'ServerName'`
 	    echo -e `cat ${conf_dir}${httpd_conf} | grep -v '^\s*#' | grep 'ServerTokens'`
 	  else
@@ -397,7 +397,7 @@ if [ -n "${DOMAIN}" ]; then
 	    exitLog ${rc}
 	  fi
 	else
-	  logOut "ERROR" "${ER01_MSG} [ Apache(httpd) ]"
+	  logError "${ER01_MSG} [ Apache(httpd) ]"
 	  rc=`expr ${rc} + ${JOB_ER}`
 	  exitLog ${rc}
 	fi
@@ -415,7 +415,7 @@ if [ -n "${DOMAIN}" ]; then
 	#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 	line "4.httpdの動作モードをeventに変更するための設定変更を行います。"
 	if ! editLimitsConf; then
-	  logOut "ERROR" "ファイルの編集${ER02_MSG} [ ${conf_d_dir}${mpm_conf} ]"
+	  logError "ファイルの編集${ER02_MSG} [ ${conf_d_dir}${mpm_conf} ]"
 	  rc=`expr ${rc} + ${JOB_ER}`
 	  exitLog ${rc}
 	fi
@@ -437,11 +437,11 @@ KeepAlive Off
 EOS
 	sleep 1
 	if [ ! -f "${conf_d_dir}${mpm_conf}" ]; then
-	  logOut "ERROR" "ファイルの編集に${ER02_MSG} [ ${conf_d_dir}${mpm_conf} ]"
+	  logError "ファイルの編集に${ER02_MSG} [ ${conf_d_dir}${mpm_conf} ]"
 	  rc=`expr ${rc} + ${JOB_ER}`
 	  exitLog ${rc}
 	fi
-	logOut "INFO" "ファイルの編集${IF02_MSG} ${conf_d_dir}${mpm_conf}"
+	logInfo "ファイルの編集${IF02_MSG} ${conf_d_dir}${mpm_conf}"
 	cat "${conf_d_dir}${mpm_conf}"
 	#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 	# 6.httpdのopen file limitの上限値緩和
@@ -454,11 +454,11 @@ LimitNOFILE=65535
 EOS
 	sleep 1
 	if [ ! -f "${limits_conf_dir}limits.conf" ]; then
-	  logOut "ERROR" "ファイルの編集${ER02_MSG} [ ${limits_conf_dir}limits.conf ]"
+	  logError "ファイルの編集${ER02_MSG} [ ${limits_conf_dir}limits.conf ]"
 	  rc=`expr ${rc} + ${JOB_ER}`
 	  exitLog ${rc}
 	fi
-	logOut "INFO" "ファイルの編集${IF02_MSG} ${limits_conf_dir}limits.conf"
+	logInfo "ファイルの編集${IF02_MSG} ${limits_conf_dir}limits.conf"
 	cat "${limits_conf_dir}limits.conf"
 	#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 	# 7.httpdの自動起動設定および起動
@@ -468,10 +468,10 @@ EOS
 	systemctl enable httpd
 	sleep 1
 	if [ $? -ne 0 ]; then
-	  logOut "WARNING" "自動起動設定${WR03_MSG} [ httpd ]"
+	  logWarn "自動起動設定${WR03_MSG} [ httpd ]"
 	  rc=`expr ${rc} + ${JOB_WR}`
 	fi
-	logOut "INFO" "自動起動設定${IF02_MSG} [ Apacht(httpd) ]"
+	logInfo "自動起動設定${IF02_MSG} [ Apacht(httpd) ]"
 	#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 	# 8.設定値反映確認のため、Apache/httpdのプロセスIDを取得
 	#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
@@ -483,19 +483,19 @@ EOS
 	systemctl start httpd
 	sleep 1
 	if ! isProcessAlive "httpd"; then
-	  logOut "ERROR" "Apache(httpd)の起動${ER02_MSG} [ httpd ]"
+	  logError "Apache(httpd)の起動${ER02_MSG} [ httpd ]"
 	  rc=`expr ${rc} + ${JOB_ER}`
 	  exitLog ${rc}
 	fi
-	logOut "INFO" "Apache(httpd)の起動${IF02_MSG} [ Apacht(httpd) ]"
+	logInfo "Apache(httpd)の起動${IF02_MSG} [ Apacht(httpd) ]"
 	#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 	# Let's Encrypt を用いたSSL証明書の取得
 	#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
   line "9.Let's Encrypt を用いたSSL証明書の取得"
-  logOut "INFO" "Let's Encrypt を用いたSSL証明書の取得とApacheへの組み込み"
+  logInfo "Let's Encrypt を用いたSSL証明書の取得とApacheへの組み込み"
   installLetsEncryptCert "$DOMAIN" "$EMAIL"
   if [ $? -ne 0 ]; then
-    logOut "ERROR" "SSL証明書の取得に失敗したため処理を中止します。"
+    logError "SSL証明書の取得に失敗したため処理を中止します。"
     rc=`expr ${rc} + ${JOB_ER}`
     exitLog ${rc}
   fi
@@ -503,7 +503,7 @@ EOS
 	# 10.Apache/httpd用のopen file limitが更新確認
 	#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 	line "10.Apache/httpd用のopen file limitが更新されたことを確認します。"
-	logOut "INFO" "ファイルの編集${IF02_MSG} [ Apacht(httpd) ]"
+	logInfo "ファイルの編集${IF02_MSG} [ Apacht(httpd) ]"
 	echo `cat /proc/$(ps -ef | grep httpd | head -n 1 | awk '{print $2}')/limits | grep 'Max open files'`
 	echo "目視による確認を行ってください。"
 	#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
@@ -542,12 +542,12 @@ EOS
 
   matched_count=$(grep -cE 'VirtualHost[[:space:]]+\*:443' "${conf_dir}${httpd_conf}")
   if [ "$matched_count" -eq 0 ]; then
-      logOut "ERROR" "ファイルの編集${ER02_MSG} [ ${conf_dir}${httpd_conf} ]"
+      logError "ファイルの編集${ER02_MSG} [ ${conf_dir}${httpd_conf} ]"
       rc=$((rc + JOB_ER))
       exitLog ${rc}
   fi
 
-	logOut "INFO" "ファイルの編集${IF02_MSG} [ ${conf_dir}${httpd_conf} ]"
+	logInfo "ファイルの編集${IF02_MSG} [ ${conf_dir}${httpd_conf} ]"
         tail ${conf_dir}${httpd_conf}
 
 	# 確認用のHTMLファイルの作成
@@ -563,11 +563,11 @@ cat <<- EOS > /var/www/html/index.html
 EOS
 	sleep 1
 	if [ $? -ne 0 ]; then
-	  logOut "ERROR" "${ER02_MSG} [ /var/www/html/index.html ]"
+	  logError "${ER02_MSG} [ /var/www/html/index.html ]"
 	  rc=`expr ${rc} + ${JOB_ER}`
 	  exitLog ${rc}
 	fi
-	logOut "INFO" "htmlファイルの作成${IF02_MSG} [ /var/www/html/index.html ]"
+	logInfo "htmlファイルの作成${IF02_MSG} [ /var/www/html/index.html ]"
         cat /var/www/html/index.html
 	#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 	# 12.サービスを再起動
@@ -577,11 +577,11 @@ EOS
 	restart_rc=$?
 	sleep 1
 	if [ ${restart_rc} -ne 0 ]; then
-	  logOut "ERROR" "Apache(httpd)の再起動${ER02_MSG} [ httpd ]"
+	  logError "Apache(httpd)の再起動${ER02_MSG} [ httpd ]"
 	  rc=`expr ${rc} + ${JOB_ER}`
 	  exitLog ${rc}
 	fi
-	logOut "INFO" "Apache(httpd)の再起動${IF02_MSG} [ Apacht(httpd) ]"
+	logInfo "Apache(httpd)の再起動${IF02_MSG} [ Apacht(httpd) ]"
 	systemctl status httpd
 
 	line "Apacheへアクセステスト"

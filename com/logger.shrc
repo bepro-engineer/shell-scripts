@@ -4,7 +4,7 @@
 # 概要　　　　：ログ出力機能を提供する共通リソース
 # 説明　　　　：
 #   各種スクリプトより source して使用するログ出力機能を提供する。
-#   logOut / startLog / exitLog 等のログ制御関数を定義する。
+#   writeLog / startLog / exitLog 等のログ制御関数を定義する。
 #
 # 引数　　　　：なし（source して使用する）
 # 戻り値　　　：なし
@@ -35,7 +35,7 @@ declare -A LOG_LEVEL_PRIORITY=(
 # ------------------------------------------------------------
 DEFAULT_LOG_MODE="CONSOLE"  # ログの出力モード (FILE, CONSOLE9, SYSLOG)
 
-BASE_PATH=${BASE_PATH:-"/home/bepro/projects/shell-scripts"}
+BASE_PATH=${BASE_PATH:-"$(cd "$(dirname "$0")/.." && pwd)"}
 # shellcheck disable=SC2034
 BIN_PATH=${BASE_PATH}/bin
 # shellcheck disable=SC2034
@@ -97,7 +97,7 @@ startLog() {
   if [[ "${DEFAULT_LOG_MODE}" == "FILE" ]]; then
     exec >> "${LOG_PATH}/${SCRIPT_NAME%%.*}.log" 2>&1
   fi
-  logOut "INFO" "SCRIPT:[${SCRIPT_NAME}] PID:[$$] STARTED LOG."
+  writeLog "INFO" "SCRIPT:[${SCRIPT_NAME}] PID:[$$] STARTED LOG."
 }
 
 # ------------------------------------------------------------------
@@ -122,12 +122,12 @@ exitLog() {
     *) status="FATAL" ;;
   esac
 
-  logOut "${status}" "SCRIPT:[${SCRIPT_NAME}] PID:[$$] ENDED LOG."
+  writeLog "${status}" "SCRIPT:[${SCRIPT_NAME}] PID:[$$] ENDED LOG."
   exit "${rc}"
 }
 
 # ------------------------------------------------------------------
-# 関数名　　：logOut
+# 関数名　　：writeLog
 # 概要　　　：指定レベルのログを出力する
 # 説明　　　：
 #   ログレベルの優先度に応じてフィルタリングし、設定されたモード
@@ -138,7 +138,7 @@ exitLog() {
 # 戻り値　　：なし
 # 使用箇所　：全スクリプトのログ出力
 # ------------------------------------------------------------------
-logOut() {
+writeLog() {
   local level="$1"
   shift
   local message="$*"
@@ -163,6 +163,15 @@ logOut() {
   fi
 }
 
+# ------------------------------------------------------------
+# レベル別ログ出力関数(writeLogのラッパー)
+# ------------------------------------------------------------
+logDebug() { writeLog "DEBUG" "$*"; }
+logInfo()  { writeLog "INFO" "$*"; }
+logWarn()  { writeLog "WARN" "$*"; }
+logError() { writeLog "ERROR" "$*"; }
+logFatal() { writeLog "FATAL" "$*"; }
+
 # ------------------------------------------------------------------
 # 関数名　　：getMsg
 # 概要　　　：外部ファイルからメッセージを取得して展開する
@@ -178,7 +187,7 @@ logOut() {
 getMsg() {
   local msg_id="$1"
   if [[ ! -f ${INFRA_MSG_CONF} ]]; then
-    logOut "ERROR" "Message configuration file not found: ${INFRA_MSG_CONF}"
+    writeLog "ERROR" "Message configuration file not found: ${INFRA_MSG_CONF}"
     return ${JOB_ER}
   fi
 
@@ -196,7 +205,7 @@ getMsg() {
   ' "${INFRA_MSG_CONF}")
 
   if [[ -z "${message}" ]]; then
-    logOut "WARN" "Message ID not found: ${msg_id}"
+    writeLog "WARN" "Message ID not found: ${msg_id}"
     return ${JOB_WR}
   fi
 
@@ -236,7 +245,7 @@ endTimer() {
   end_time=$(date +%s)
   elapsed=$((end_time - TIMER_START))
 
-  logOut "INFO" "Execution time: ${elapsed} seconds."
+  writeLog "INFO" "Execution time: ${elapsed} seconds."
 }
 
 # ------------------------------------------------------------------
@@ -345,10 +354,10 @@ expandMsg() {
 
 # ------------------------------------------------------------------
 # 関数名　　：cnvServerityToLevel
-# 概要　　　：syslog セベリティを logOut レベルへ変換して出力する
+# 概要　　　：syslog セベリティを writeLog レベルへ変換して出力する
 # 説明　　　：
 #   ファシリティ.セベリティ文字列からセベリティを取り出し、
-#   対応する logOut レベルへ変換してログを出力する。
+#   対応する writeLog レベルへ変換してログを出力する。
 #
 # 引数　　　：$1 ファシリティ.セベリティ（例: user.err）
 #             $2 メッセージ文字列
@@ -363,12 +372,12 @@ cnvServerityToLevel() {
   msg=$(expandMsg "$2")
 
   case "$level" in
-    emerg|panic|fatal )          logOut "FATAL" "$msg" ;;
-    crit|error|err )             logOut "ERROR" "$msg" ;;
-    alert|warn|warning|notice )  logOut "WARN"  "$msg" ;;
-    info )                       logOut "INFO"  "$msg" ;;
-    debug|trace )                logOut "DEBUG" "$msg" ;;
-    * )                          logOut "ERROR" "$msg" ;;
+    emerg|panic|fatal )          writeLog "FATAL" "$msg" ;;
+    crit|error|err )             writeLog "ERROR" "$msg" ;;
+    alert|warn|warning|notice )  writeLog "WARN"  "$msg" ;;
+    info )                       writeLog "INFO"  "$msg" ;;
+    debug|trace )                writeLog "DEBUG" "$msg" ;;
+    * )                          writeLog "ERROR" "$msg" ;;
   esac
 }
 
@@ -386,14 +395,14 @@ cnvServerityToLevel() {
 # ------------------------------------------------------------------
 logSystem() {
     if [ ! -f "${INFRA_MSG_CONF}" ]; then
-        logOut "ERROR" "Configuration file can not be found [ ${INFRA_MSG_CONF} ]."
+        writeLog "ERROR" "Configuration file can not be found [ ${INFRA_MSG_CONF} ]."
         exitLog 2
     fi
 
     fac_serv=$(awk -v id="$1" 'NF >= 2 && $1 == id { print $2; exit }' "${INFRA_MSG_CONF}")
 
     if [ -z "$fac_serv" ]; then
-        logOut "WARN" "Logger priority is missing for id [$1]. Message not sent to syslog."
+        writeLog "WARN" "Logger priority is missing for id [$1]. Message not sent to syslog."
         return 1
     fi
 
@@ -401,8 +410,8 @@ logSystem() {
     raw_msg=$(getSysMsg "$1" "$fac_serv" "$msg_conf")
     e_msg=$(expandMsg "$raw_msg")
 
-    logOut "DEBUG" "fac_serv=[$fac_serv]"
-    logOut "DEBUG" "e_msg=[$e_msg]"
+    writeLog "DEBUG" "fac_serv=[$fac_serv]"
+    writeLog "DEBUG" "e_msg=[$e_msg]"
 
     syslog_facility="${fac_serv%%.*}"
     syslog_severity="${fac_serv##*.}"
@@ -429,7 +438,7 @@ logSystem() {
       "SYSLOG")
         ;;
       *)
-        logOut "ERROR" "Invalid log mode: ${DEFAULT_LOG_MODE}"
+        writeLog "ERROR" "Invalid log mode: ${DEFAULT_LOG_MODE}"
         return 1
         ;;
     esac
@@ -442,9 +451,9 @@ logSystem() {
 # export DEFAULT_LOG_MODE="CONSOLE"
 # startLog
 # startTimer
-# logOut "INFO" "This is an info message."
-# logOut "WARNING" "This is a warning message."
-# logOut "ERROR" "This is an error message."
+# logInfo "This is an info message."
+# logWarn "This is a warning message."
+# logError "This is an error message."
 # getMsg "MSG001"
 # endTimer
 # exitLog ${JOB_OK}

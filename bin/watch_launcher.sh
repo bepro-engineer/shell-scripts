@@ -29,16 +29,16 @@ rc=${JOB_ER}
 # return   N/A
 # ----------------------------------------------------------
 terminate() {
-  logOut "DEBUG" "$0:terminate() STARTED !"
+  logDebug "$0:terminate() STARTED !"
   switchLog
   status=0
   [ "$1" ] && status=$1
-  logOut "INFO" "terminating with status [${status}]..."
+  logInfo "terminating with status [${status}]..."
   if [ -d ${lockD} ]; then
     rm -rf ${lockD}
   fi
-  logOut "INFO" "done."
-  logOut "DEBUG" "$0:terminate() ENDED !"
+  logInfo "done."
+  logDebug "$0:terminate() ENDED !"
   exitLog ${status}
 }
 
@@ -48,11 +48,11 @@ terminate() {
 # return   N/A
 # ----------------------------------------------------------
 once() {
-  logOut "DEBUG" "$0:once() STARTED !"
-  logOut "INFO" ==== on demand process start
+  logDebug "$0:once() STARTED !"
+  logInfo ==== on demand process start
   limit=0  # break sleeping
   once=1
-  logOut "DEBUG" "$0:once() ENDED !"
+  logDebug "$0:once() ENDED !"
 }
 
 # ----------------------------------------------------------
@@ -61,11 +61,11 @@ once() {
 # return   N/A
 # ----------------------------------------------------------
 reload() {
-  logOut "DEBUG" "$0:reload() STARTED !"
+  logDebug "$0:reload() STARTED !"
   loadConfig
   loadCommand
   dumpSetting
-  logOut "DEBUG" "$0:reload() ENDED !"
+  logDebug "$0:reload() ENDED !"
 }
 
 # ----------------------------------------------------------
@@ -74,7 +74,7 @@ reload() {
 # return   N/A
 # ----------------------------------------------------------
 usage() {
-  logOut "DEBUG" "$0:usage() STARTED !"
+  logDebug "$0:usage() STARTED !"
   cat <<EOUSAGE
 
   $0 configFile {operation-1}
@@ -99,7 +99,7 @@ usage() {
     help      show this message.
 
 EOUSAGE
-  logOut "DEBUG" "$0:usage() ENDED !"
+  logDebug "$0:usage() ENDED !"
 }
 
 # ----------------------------------------------------------
@@ -147,15 +147,15 @@ process() {
 # return   N/A
 # ----------------------------------------------------------
 prepareDirs() {
-  logOut "DEBUG" "$0:prepareDirs() STARTED !"
-        logOut "DEBUG" "${basedir} ${logdir}"
+  logDebug "$0:prepareDirs() STARTED !"
+        logDebug "${basedir} ${logdir}"
   for d in ${basedir} ${logdir}; do
     if [ ! -d ${d} ]; then
-      logOut "DEBUG" "${d}"
+      logDebug "${d}"
       mkdir -p "${d}"
     fi
   done
-  logOut "DEBUG" "$0:prepareDirs() ENDED !"
+  logDebug "$0:prepareDirs() ENDED !"
 }
 
 # ----------------------------------------------------------
@@ -164,8 +164,8 @@ prepareDirs() {
 # return   N/A
 # ----------------------------------------------------------
 intermittentSleep() {
-  logOut "DEBUG" "$0:intermittentSleep() STARTED !"
-  logOut "INFO" sleeping [${interval}] sec...
+  logDebug "$0:intermittentSleep() STARTED !"
+  logInfo sleeping [${interval}] sec...
   limit=${interval}
   a=0
   while ([ ${a} -lt ${limit} ])
@@ -173,7 +173,7 @@ intermittentSleep() {
     let a=${a}+1 > /dev/null
     sleep 1
   done
-  logOut "DEBUG" "$0:intermittentSleep() ENDED !"
+  logDebug "$0:intermittentSleep() ENDED !"
 }
 
 # ----------------------------------------------------------
@@ -182,14 +182,14 @@ intermittentSleep() {
 # return   N/A
 # ----------------------------------------------------------
 switchLog() {
-  logOut "DEBUG" "$0:switchLog() STARTED !"
+  logDebug "$0:switchLog() STARTED !"
 
   exec >> ${logfile} 2>&1
 
   if [ `ls ${logdir}/${name}.*.log | wc -l` -gt 8 ]; then
     ls -t ${logdir}/${name}.*.log | tail -1 | xargs rm
   fi
-  logOut "DEBUG" "$0:switchLog() ENDED !"
+  logDebug "$0:switchLog() ENDED !"
 }
 
 # ----------------------------------------------------------
@@ -198,14 +198,14 @@ switchLog() {
 # return   N/A
 # ----------------------------------------------------------
 dumpSetting() {
-  logOut "DEBUG" "$0:dumpSetting() STARTED !"
+  logDebug "$0:dumpSetting() STARTED !"
   cat /dev/null > ${inifile}
   for key in ${dumpvariables}
   do
     eval value=\$${key}
     echo ${key}=${value} >> ${inifile}
   done
-  logOut "DEBUG" "$0:dumpSetting() ENDED !"
+  logDebug "$0:dumpSetting() ENDED !"
 }
 
 # ----------------------------------------------------------
@@ -214,7 +214,7 @@ dumpSetting() {
 # return   N/A
 # ----------------------------------------------------------
 searchConfig() {
-  logOut "DEBUG" "$0:searchConfig() STARTED !"
+  logDebug "$0:searchConfig() STARTED !"
   if [ -f ${config} ]; then
     return 0
   fi
@@ -228,7 +228,7 @@ searchConfig() {
       break
     fi
   done
-  logOut "DEBUG" "$0:searchConfig() ENDED !"
+  logDebug "$0:searchConfig() ENDED !"
 }
 
 # ----------------------------------------------------------
@@ -237,11 +237,11 @@ searchConfig() {
 # return   N/A
 # ----------------------------------------------------------
 loadConfig() {
-  logOut "DEBUG" "$0:loadConfig() STARTED !"
+  logDebug "$0:loadConfig() STARTED !"
   if [ -f ${config} ]; then
     load ${config}
   fi
-  logOut "DEBUG" "$0:loadConfig() ENDED !"
+  logDebug "$0:loadConfig() ENDED !"
 }
 
 # ----------------------------------------------------------
@@ -250,13 +250,13 @@ loadConfig() {
 # return   N/A
 # ----------------------------------------------------------
 loadCommand() {
-  logOut "DEBUG" "$0:loadCommand() STARTED !"
+  logDebug "$0:loadCommand() STARTED !"
   if [ -f ${cmdfile} ]; then
     load ${cmdfile}
     rm ${cmdfile}
     dumpSetting
   fi
-  logOut "DEBUG" "$0:loadCommand() ENDED !"
+  logDebug "$0:loadCommand() ENDED !"
 }
 
 # ----------------------------------------------------------
@@ -265,16 +265,16 @@ loadCommand() {
 # return   N/A
 # ----------------------------------------------------------
 load() {
-  logOut "DEBUG" "$0:load() STARTED !"
+  logDebug "$0:load() STARTED !"
   theFile=$1
-  logOut "INFO" loading [${theFile}]...
+  logInfo loading [${theFile}]...
   . ${theFile}
   if [[ ${terminate} -eq 1 ]]; then
-    logOut "INFO" "terminate command accepted."
+    logInfo "terminate command accepted."
     terminate 0
   fi
   limit=0  # break intermittent sleep
-  logOut "DEBUG" "$0:load() ENDED !"
+  logDebug "$0:load() ENDED !"
 }
 
 # ----------------------------------------------------------
@@ -283,14 +283,14 @@ load() {
 # return   N/A
 # ----------------------------------------------------------
 callProcess() {
-  logOut "DEBUG" "$0:callProcess() STARTED !"
+  logDebug "$0:callProcess() STARTED !"
   if [ ${repeat} -eq 1 -o ${once} -eq 1 ]; then
     process
     if [ ${once} -eq 1 ]; then
       once=0
     fi
   fi
-  logOut "DEBUG" "$0:callProcess() ENDED !"
+  logDebug "$0:callProcess() ENDED !"
 }
 
 # ----------------------------------------------------------
@@ -299,27 +299,27 @@ callProcess() {
 # return   N/A
 # ----------------------------------------------------------
 checkStatus() {
-  logOut "DEBUG" "$0:checkStatus() STARTED !"
+  logDebug "$0:checkStatus() STARTED !"
   withClean=$1
   if [ -d ${lockD} ]; then
     if [ -f ${pidfile} ]; then
       pid=`cat ${pidfile}`
-      logOut "INFO" ${name} maybe running. pid = ${pid}
-      logOut "DEBUG" "ps -aef | grep ${config##*/} | grep ${pid} | grep -v grep | wc -l"
+      logInfo ${name} maybe running. pid = ${pid}
+      logDebug "ps -aef | grep ${config##*/} | grep ${pid} | grep -v grep | wc -l"
       count=`ps -aef | grep ${config##*/} | grep ${pid} | grep -v grep | wc -l`
       if [ $count -eq 0 ]; then
-        logOut "INFO" but ${pid} is not ${name}.
+        logInfo but ${pid} is not ${name}.
         if [ "$withClean" = "clean" ]; then
-          logOut "INFO" cleaning up lock directory ...
+          logInfo cleaning up lock directory ...
           cd / && rm -rf ${lockD}.dead && mv ${lockD} ${lockD}.dead
-          logOut "INFO" done.
+          logInfo done.
         fi
       fi
     fi
   else
-    logOut "INFO" ${name} is not running.
+    logInfo ${name} is not running.
   fi
-  logOut "DEBUG" "$0:checkStatus() ENDED !"
+  logDebug "$0:checkStatus() ENDED !"
 }
 
 # ----------------------------------------------------------
@@ -328,7 +328,7 @@ checkStatus() {
 # return   N/A
 # ----------------------------------------------------------
 checkArgs(){
-  logOut "DEBUG" "$0:checkArgs() STARTED !"
+  logDebug "$0:checkArgs() STARTED !"
   # operation-2 group does not require config filename.
   # so check them here.
   if [ ! "$1" -o "$1" = "help" -o "$1" = "usage" ]; then
@@ -345,7 +345,7 @@ checkArgs(){
     ps auxww | grep $PROGRAM | grep -v grep | grep ' run'
     exitLog 0
   fi
-  logOut "DEBUG" "$0:checkArgs() ENDED !"
+  logDebug "$0:checkArgs() ENDED !"
 }
 
 # ----------------------------------------------------------
@@ -354,21 +354,21 @@ checkArgs(){
 # return   N/A
 # ----------------------------------------------------------
 startLoop() {
-  logOut "DEBUG" "$0:startLoop() STARTED !"
+  logDebug "$0:startLoop() STARTED !"
   prepareDirs
 
   if [ -f "${pidfile}" ]; then
-      logOut "Warn" "already running. try $0 status"
+      writeLog "Warn" "already running. try $0 status"
       exitLog 1
   fi
 
-  logOut "DEBUG" "nohup $fullname ${config} run ver=$VERSION > /dev/null 2>&1 &"
+  logDebug "nohup $fullname ${config} run ver=$VERSION > /dev/null 2>&1 &"
   nohup $fullname ${config} run ver=$VERSION > /dev/null 2>&1 &
 
   # pidfile確認（リトライ）
   for i in {1..5}; do
       remain=$((5 - i))
-      logOut "DEBUG" "Checking pidfile. ${remain}sec seconds remaining..."
+      logDebug "Checking pidfile. ${remain}sec seconds remaining..."
       [ -s "${pidfile}" ] && break
       sleep 1
   done
@@ -384,8 +384,8 @@ startLoop() {
     exit 1
   fi
 
-  logOut "INFO" "may be launched. [pid=${pid}]"
-  logOut "DEBUG" "$0:startLoop() ENDED !"
+  logInfo "may be launched. [pid=${pid}]"
+  logDebug "$0:startLoop() ENDED !"
   exitLog 0
 }
 
@@ -395,28 +395,28 @@ startLoop() {
 # return   N/A
 # ----------------------------------------------------------
 stopLoop() {
-  logOut "DEBUG" "$0:stopLoop() STARTED !"
+  logDebug "$0:stopLoop() STARTED !"
   if [ -d ${lockD} ]; then
     if [ -f ${pidfile} ]; then
       pid=`cat ${pidfile}`
-      logOut "DEBUG" "ps -aef | grep ${config##*/} | grep ${pid} | grep -v grep | wc -l"
+      logDebug "ps -aef | grep ${config##*/} | grep ${pid} | grep -v grep | wc -l"
       status=`ps -aef | grep ${config##*/} | grep ${pid} | grep -v grep | wc -l`
       if [ ${status} -eq 1 ]; then
         kill ${pid}
-        logOut "INFO" "the process ${pid} was killed. return code : $?"
+        logInfo "the process ${pid} was killed. return code : $?"
       else
-        logOut "Warn" "there is no process to be stopped."
+        writeLog "Warn" "there is no process to be stopped."
         exitLog 1
       fi
     else
-      logOut "ERROR" "it may be corrupted. check environment." 1>&2
+      logError "it may be corrupted. check environment." 1>&2
       exitLog 2
     fi
   else
-    logOut "Warn" "there is no process to be stopped."
+    writeLog "Warn" "there is no process to be stopped."
     exitLog 1
   fi
-  logOut "DEBUG" "$0:stopLoop() ENDED !"
+  logDebug "$0:stopLoop() ENDED !"
   exitLog 0
 }
 
@@ -426,17 +426,17 @@ stopLoop() {
 # return   N/A
 # ----------------------------------------------------------
 checkLock() {
-  logOut "DEBUG" "$0:checkLock() STARTED !"
+  logDebug "$0:checkLock() STARTED !"
   if [ -d ${lockD} ]; then
     if [ -f ${pidfile} ]; then
       pid=`cat ${pidfile}`
     fi
     if [ "${pid}" ]; then
-      logOut "INFO" "is there doppelganger? please check pid=[${pid}]." 1>&2
+      logInfo "is there doppelganger? please check pid=[${pid}]." 1>&2
       ps -aef | grep ${pid} | grep -v grep
       exitLog 0
     else
-      logOut "ERROR" "it may be corrupted. check environment." 1>&2
+      logError "it may be corrupted. check environment." 1>&2
       exitLog 2
     fi
   else
@@ -444,7 +444,7 @@ checkLock() {
     echo $$ > ${pidfile}
     cd ${lockD}
   fi
-  logOut "DEBUG" "$0:checkLock() ENDED !"
+  logDebug "$0:checkLock() ENDED !"
 }
 
 # ----------------------------------------------------------
@@ -475,7 +475,7 @@ dumpvariables="name interval threshold_warn threshold_err basedir lockD pidfile 
 
 startLog
 
-logOut "INFO" args: ["$@"]
+logInfo args: ["$@"]
 
 checkArgs $*
 # ----------------------------------------------------------
@@ -497,12 +497,12 @@ if [ $# -ge 2 ]; then
   shift
   searchConfig
   if [ ! -r ${config} ]; then
-    logOut "ERROR" "ERROR. no such file [${config}]."
+    logError "ERROR. no such file [${config}]."
     exitLog 2
   fi
   loadConfig
   if [ $? -ne 0 ];then
-    logOut "ERROR" "ERROR. can not load config [${config}]."
+    logError "ERROR. can not load config [${config}]."
     exitLog 2
   fi
 fi
@@ -544,13 +544,13 @@ trap "reload" 12
 
 # initialize.
 switchLog
-logOut "INFO" initializing...
+logInfo initializing...
 
 # dump current setting variables for convenience.
 dumpSetting
 
 # main loop.
-logOut "INFO" entering main loop.
+logInfo entering main loop.
 while true
 do
   switchLog

@@ -93,22 +93,22 @@ getFileStatus() {
 # ------------------------------------------------------------------
 checkArgs() {
     if [ $# -lt 2 ]; then
-        logOut "ERROR" "Insufficient number of arguments."
+        logError "Insufficient number of arguments."
         exitLog ${JOB_ER}
     fi
 
     if echo "$1" | grep -q '[*?]'; then
-        logOut "ERROR" "Wildcard characters are not allowed in file path: [$1]"
+        logError "Wildcard characters are not allowed in file path: [$1]"
         exitLog ${JOB_ER}
     fi
 
     if [ ! -f "$1" ]; then
-        logOut "ERROR" "Specified file does not exist: [$1]"
+        logError "Specified file does not exist: [$1]"
         exitLog ${JOB_ER}
     fi
 
     if [ ! -d "$2" ]; then
-        logOut "ERROR" "Specified directory does not exist: [$2]"
+        logError "Specified directory does not exist: [$2]"
         exitLog ${JOB_ER}
     fi
 }
@@ -161,20 +161,20 @@ done
 
 # 引数が一つもなければ usage 表示
 if [ "$OPTIND" -eq 1 ]; then
-    logOut "ERROR" "No arguments provided."
+    logError "No arguments provided."
     usage
     exitLog ${JOB_ER}
 fi
 
 if [ -z "$mode" ] || [ -z "$src_fp" ] || [ -z "$dst_dir" ]; then
-    logOut "ERROR" "Missing required arguments."
+    logError "Missing required arguments."
     usage
     exitLog ${JOB_ER}
 fi
 
 # モード値の妥当性チェック
 if [ "$mode" != "send" ] && [ "$mode" != "recv" ]; then
-    logOut "ERROR" "Invalid mode specified: [$mode]"
+    logError "Invalid mode specified: [$mode]"
     usage
     exitLog ${JOB_ER}
 fi
@@ -188,7 +188,7 @@ startLog
 trap "terminate" HUP INT QUIT TERM
 
 if ! acquireLock; then
-    logOut "ERROR" "排他ロックを取得できませんでした。"
+    logError "排他ロックを取得できませんでした。"
     exitLog ${JOB_ER}
 fi
 
@@ -206,18 +206,18 @@ if [ "$mode" = "send" ]; then
     # モード: 送信（sender側）
     # =========================
     file_stat=$(getFileStatus "$dst_fp")
-    logOut "INFO" "送信先ファイル [$dst_fp] の状態: [$file_stat]"
+    logInfo "送信先ファイル [$dst_fp] の状態: [$file_stat]"
 
     if [ "$file_stat" = "UNEXPECTED" ]; then
-        logOut "ERROR" "不正な状態のファイルが存在します。: [$dst_fp]"
+        logError "不正な状態のファイルが存在します。: [$dst_fp]"
         exitLog ${JOB_ER}
     fi
 
     if [ "$file_stat" = "COMPLETED" ]; then
         for f in "$dst_fp" "$dst_fp.end" "$dst_fp.fin"; do
-            logOut "INFO" "既存ファイルを削除します: $f"
+            logInfo "既存ファイルを削除します: $f"
             rm -f "$f" || {
-                logOut "ERROR" "ファイル削除に失敗しました: $f"
+                logError "ファイル削除に失敗しました: $f"
                 exitLog ${JOB_ER}
             }
         done
@@ -225,14 +225,14 @@ if [ "$mode" = "send" ]; then
     fi
 
     if [ "$file_stat" = "LOADED" ]; then
-        logOut "INFO" "受信側が未完了のため、送信スキップ: [$dst_fp.end]"
+        logInfo "受信側が未完了のため、送信スキップ: [$dst_fp.end]"
         exitLog ${JOB_OK}
     fi
 
     if [ "$file_stat" = "INITIAL" ] || [ "$file_stat" = "LOADING" ]; then
         cp -pf "$src_fp" "$dst_fp"
         if [ $? -ne 0 ]; then
-            logOut "ERROR" "ファイルのコピーに失敗しました。"
+            logError "ファイルのコピーに失敗しました。"
             exitLog ${JOB_ER}
         fi
 
@@ -240,12 +240,12 @@ if [ "$mode" = "send" ]; then
         dst_hash=$(getFileHash "$dst_fp")
 
         if [ "$src_hash" != "$dst_hash" ]; then
-            logOut "ERROR" "MD5値が一致しません。転送失敗 [$src_hash] != [$dst_hash]"
+            logError "MD5値が一致しません。転送失敗 [$src_hash] != [$dst_hash]"
             exitLog ${JOB_ER}
         fi
 
         echo "$src_hash" > "${dst_fp}.end"
-        logOut "INFO" "送信完了。MD5一致: [$src_hash]"
+        logInfo "送信完了。MD5一致: [$src_hash]"
     fi
 
 elif [ "$mode" = "recv" ]; then
@@ -254,27 +254,27 @@ elif [ "$mode" = "recv" ]; then
     # モード: 受信（receiver側）
     # =========================
     file_stat=$(getFileStatus "$src_fp")
-    logOut "INFO" "受信元ファイル [$src_fp] の状態: [$file_stat]"
+    logInfo "受信元ファイル [$src_fp] の状態: [$file_stat]"
 
     if [ "$file_stat" = "UNEXPECTED" ]; then
-        logOut "ERROR" "不正な状態のファイルが存在します。: [$src_fp]"
+        logError "不正な状態のファイルが存在します。: [$src_fp]"
         exitLog ${JOB_ER}
     fi
 
     if [ "$file_stat" = "COMPLETED" ]; then
-        logOut "INFO" "受信済みです。 [$src_fp.fin]"
+        logInfo "受信済みです。 [$src_fp.fin]"
         exitLog ${JOB_OK}
     fi
 
     if [ "$file_stat" = "INITIAL" ] || [ "$file_stat" = "LOADING" ]; then
-        logOut "INFO" "送信処理が未完了のため、受信スキップします。"
+        logInfo "送信処理が未完了のため、受信スキップします。"
         exitLog ${JOB_OK}
     fi
 
     if [ "$file_stat" = "LOADED" ]; then
         cp -pf "$src_fp" "$dst_fp"
         if [ $? -ne 0 ]; then
-            logOut "ERROR" "ファイルの受信に失敗しました。"
+            logError "ファイルの受信に失敗しました。"
             exitLog ${JOB_ER}
         fi
 
@@ -282,12 +282,12 @@ elif [ "$mode" = "recv" ]; then
         new_hash=$(getFileHash "$dst_fp")
 
         if [ "$org_hash" != "$new_hash" ]; then
-            logOut "ERROR" "MD5検証失敗。 [$org_hash] != [$new_hash]"
+            logError "MD5検証失敗。 [$org_hash] != [$new_hash]"
             exitLog ${JOB_ER}
         fi
 
         touch "${src_fp}.fin"
-        logOut "INFO" "受信完了。MD5一致: [$new_hash]"
+        logInfo "受信完了。MD5一致: [$new_hash]"
     fi
 fi
 
@@ -296,5 +296,5 @@ fi
 # ----------------------------------------------------------
 scope="post"
 
-logOut "INFO" "fileTransfer.sh を正常終了します。"
+logInfo "fileTransfer.sh を正常終了します。"
 exitLog ${JOB_OK}

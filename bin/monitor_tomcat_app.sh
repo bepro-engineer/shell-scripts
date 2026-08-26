@@ -162,7 +162,7 @@ validateTargetExists() {
     if [ $? -eq 0 ]; then
         return 0
     fi
-    logOut "ERROR" "Target not found in Tomcat. path=[$app_path]"
+    logError "Target not found in Tomcat. path=[$app_path]"
     return 2
 }
 
@@ -177,7 +177,7 @@ validateTargetExists() {
 # 使用箇所　：trap
 # ------------------------------------------------------------------
 terminate() {
-    logOut "ERROR" "Terminated. command=[$CMD] path=[$APP_PATH] file=[$APP_FILE]"
+    logError "Terminated. command=[$CMD] path=[$APP_PATH] file=[$APP_FILE]"
     exitLog 2
 }
 
@@ -194,7 +194,7 @@ terminate() {
 initDirs() {
     mkdir -p "$PID_DIR" "$META_DIR" >/dev/null 2>&1
     if [ $? -ne 0 ]; then
-        logOut "ERROR" "Failed to create dirs. pid_dir=[$PID_DIR] meta_dir=[$META_DIR]"
+        logError "Failed to create dirs. pid_dir=[$PID_DIR] meta_dir=[$META_DIR]"
         return 1
     fi
     return 0
@@ -316,7 +316,7 @@ readTargets() {
 
     if [ -n "$APP_FILE" ]; then
         if [ ! -f "$APP_FILE" ]; then
-            logOut "ERROR" "Target file not found. file=[$APP_FILE]"
+            logError "Target file not found. file=[$APP_FILE]"
             return 2
         fi
 
@@ -333,7 +333,7 @@ readTargets() {
         return 0
     fi
 
-    logOut "ERROR" "Missing target. specify -a or -f."
+    logError "Missing target. specify -a or -f."
     return 2
 }
 
@@ -428,11 +428,11 @@ restartApp() {
 
     out=$(sh "$MANAGE_SCRIPT" -b "$BASE_URL" -u "$MANAGER_USER" -p "$MANAGER_PASS" -a "$app_path" -c restart 2>&1)
     if [ $? -ne 0 ]; then
-        logOut "ERROR" "restart failed. path=[$app_path] detail=[$out]"
+        logError "restart failed. path=[$app_path] detail=[$out]"
         return 1
     fi
 
-    logOut "INFO" "restart succeeded. path=[$app_path] detail=[$out]"
+    logInfo "restart succeeded. path=[$app_path] detail=[$out]"
     return 0
 }
 
@@ -553,7 +553,7 @@ cmdList() {
 # ------------------------------------------------------------------
 validateArgs() {
     if [ -z "$CMD" ]; then
-        logOut "ERROR" "Missing -c <command>."
+        logError "Missing -c <command>."
         usage
         return 2
     fi
@@ -561,7 +561,7 @@ validateArgs() {
     case "$CMD" in
         list|status|show|start|stop) ;;
         *)
-            logOut "ERROR" "Invalid command. -c [$CMD]"
+            logError "Invalid command. -c [$CMD]"
             usage
             return 2
             ;;
@@ -572,24 +572,24 @@ validateArgs() {
     fi
 
     if [ -n "$APP_PATH" ] && [ -n "$APP_FILE" ]; then
-        logOut "ERROR" "Target options are mutually exclusive. use -a OR -f."
+        logError "Target options are mutually exclusive. use -a OR -f."
         usage
         return 2
     fi
 
     if [ "$CMD" = "start" ] || [ "$CMD" = "show" ]; then
         if [ -z "$MANAGER_USER" ] || [ -z "$MANAGER_PASS" ]; then
-            logOut "ERROR" "Missing -u or -p."
+            logError "Missing -u or -p."
             usage
             return 2
         fi
         if [ -z "$BASE_URL" ]; then
-            logOut "ERROR" "Missing -b."
+            logError "Missing -b."
             usage
             return 2
         fi
         if [ ! -f "$MANAGE_SCRIPT" ]; then
-            logOut "ERROR" "manage script not found. path=[$MANAGE_SCRIPT]"
+            logError "manage script not found. path=[$MANAGE_SCRIPT]"
             return 2
         fi
     fi
@@ -624,7 +624,7 @@ daemonMain() {
 
     isManagerReachable
     if [ $? -ne 0 ]; then
-        logOut "ERROR" "Tomcat manager unreachable at daemon start. path=[$app_path]"
+        logError "Tomcat manager unreachable at daemon start. path=[$app_path]"
     else
         validateTargetExists "$app_path"
         if [ $? -ne 0 ]; then
@@ -636,25 +636,25 @@ daemonMain() {
 
     echo "$$" > "$pid_file"
     if [ $? -ne 0 ]; then
-        logOut "ERROR" "Failed to write pid file. file=[$pid_file] path=[$app_path]"
+        logError "Failed to write pid file. file=[$pid_file] path=[$app_path]"
         exit 2
     fi
 
     writeMeta "$app_path"
     if [ $? -ne 0 ]; then
-        logOut "ERROR" "Failed to write meta. path=[$app_path]"
+        logError "Failed to write meta. path=[$app_path]"
         exit 2
     fi
 
     while :; do
         isManagerReachable
         if [ $? -ne 0 ]; then
-            logOut "ERROR" "Tomcat manager unreachable. try start unit=[$TOMCAT_UNIT] path=[$app_path]"
+            logError "Tomcat manager unreachable. try start unit=[$TOMCAT_UNIT] path=[$app_path]"
             prev_state="tomcat_down"
 
             startTomcat
             if [ $? -ne 0 ]; then
-                logOut "ERROR" "Tomcat start failed. unit=[$TOMCAT_UNIT] path=[$app_path]"
+                logError "Tomcat start failed. unit=[$TOMCAT_UNIT] path=[$app_path]"
                 sleep "$CHECK_INTERVAL_SEC"
                 continue
             fi
@@ -666,7 +666,7 @@ daemonMain() {
 
         isAppKnown "$app_path"
         if [ $? -ne 0 ]; then
-            logOut "ERROR" "Target disappeared. path=[$app_path]"
+            logError "Target disappeared. path=[$app_path]"
             prev_state="notfound"
             sleep "$CHECK_INTERVAL_SEC"
             continue
@@ -677,19 +677,19 @@ daemonMain() {
 
         if [ $state_rc -eq 0 ] && [ "$state" = "running" ]; then
             if [ "$prev_state" != "running" ]; then
-                logOut "INFO" "App recovered. path=[$app_path] prev=[$prev_state] curr=[running]"
+                logInfo "App recovered. path=[$app_path] prev=[$prev_state] curr=[running]"
             fi
             prev_state="running"
             sleep "$CHECK_INTERVAL_SEC"
             continue
         fi
 
-        logOut "ERROR" "App down. path=[$app_path] state=[$state] -> restart"
+        logError "App down. path=[$app_path] state=[$state] -> restart"
         prev_state="$state"
 
         restartApp "$app_path"
         if [ $? -ne 0 ]; then
-            logOut "ERROR" "App restart failed. path=[$app_path]"
+            logError "App restart failed. path=[$app_path]"
         fi
 
         sleep "$TOMCAT_BOOT_WAIT_SEC"
@@ -699,10 +699,10 @@ daemonMain() {
 
         if [ $state_rc -eq 0 ] && [ "$state" = "running" ]; then
             prev_state="running"
-            logOut "INFO" "App recovered. path=[$app_path] curr=[running]"
+            logInfo "App recovered. path=[$app_path] curr=[running]"
         else
             prev_state="$state"
-            logOut "ERROR" "App not recovered yet. path=[$app_path] curr=[$state] rc=[$state_rc]"
+            logError "App not recovered yet. path=[$app_path] curr=[$state] rc=[$state_rc]"
         fi
 
         sleep "$CHECK_INTERVAL_SEC"

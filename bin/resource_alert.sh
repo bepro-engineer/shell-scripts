@@ -97,7 +97,7 @@ parseArgs() {
 
     # -m 未指定または不正値ならエラー
     if [ -z "$type" ] || ! echo "$type" | grep -qE '^(cpu|mem)$'; then
-        logOut "ERROR" "Invalid or missing -m argument."
+        logError "Invalid or missing -m argument."
         usage
     fi
 }
@@ -118,7 +118,7 @@ loadThreshold() {
     threshold_file="$ETC_PATH/$host_id/${type}_threshold.conf"
     record_file="$TMP_PATH/${type}_alert.rep"
 
-    [ ! -f "$threshold_file" ] && logOut "ERROR" "Missing threshold file: $threshold_file" && exitLog ${JOB_ER}
+    [ ! -f "$threshold_file" ] && logError "Missing threshold file: $threshold_file" && exitLog ${JOB_ER}
     [ ! -f "$record_file" ] && touch "$record_file"
 
     read threshold_count warn_limit critical_limit < <(
@@ -133,10 +133,10 @@ scope="pre"
 
 parseArgs "$@"
 startLog
-logOut "INFO" "Args: -m $type"
+logInfo "Args: -m $type"
 
 if acquireLock; then
-    logOut "INFO" "Lock acquired"
+    logInfo "Lock acquired"
 else
     abort "Lock acquisition failed."
 fi
@@ -158,20 +158,20 @@ fi
 usage_val_int=$(echo "$usage_raw_val" | awk '{printf("%d", $1)}')
 threshold=$warn_limit
 
-logOut "INFO"  "Threshold        : ${threshold} %"
-logOut "INFO"  "Current Usage    : ${usage_val_int} %"
-logOut "DEBUG" "Execution Time   : ${exec_time}"
+logInfo  "Threshold        : ${threshold} %"
+logInfo  "Current Usage    : ${usage_val_int} %"
+logDebug "Execution Time   : ${exec_time}"
 
 # 使用率が閾値以上なら記録
 if [ "$usage_val_int" -ge "$threshold" ]; then
     echo "${usage_val_int}% $exec_time" >> "$record_file"
-    logOut "WARN" "Usage exceeded: ${usage_val_int}%"
+    logWarn "Usage exceeded: ${usage_val_int}%"
 else
     if [ -s "$record_file" ]; then
         > "$record_file"
-        logOut "INFO" "Reset alert history: $record_file"
+        logInfo "Reset alert history: $record_file"
     fi
-    logOut "DEBUG" "Usage within normal range."
+    logDebug "Usage within normal range."
 fi
 
 # 超過カウント取得
@@ -179,12 +179,12 @@ count_exceed=$(wc -l < "$record_file" | tr -d ' ')
 # 超過カウント取得
 count_exceed=$(wc -l < "$record_file" | tr -d ' ')
 
-logOut "DEBUG" "threshold_count=$threshold_count"
-logOut "DEBUG" "count_exceed=$count_exceed"
-logOut "DEBUG" "record_file content:"
+logDebug "threshold_count=$threshold_count"
+logDebug "count_exceed=$count_exceed"
+logDebug "record_file content:"
 cat "$record_file" >&2
 
-logOut "INFO" "Exceed count: $count_exceed"
+logInfo "Exceed count: $count_exceed"
 
 # 致命的判定とログ出力（対象別）
 if [ "$count_exceed" -ge "$threshold_count" ]; then

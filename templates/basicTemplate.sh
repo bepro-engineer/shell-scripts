@@ -96,10 +96,10 @@ scope="pre"
 startLog
 trap "terminate" HUP INT QUIT TERM
 
-logOut "DEBUG" "args: [$*]"
+logDebug "args: [$*]"
 
 if acquireLock; then
-  logOut "INFO" "successfully locked."
+  logInfo "successfully locked."
 else
   abort "could not acquire lock."
 fi
@@ -114,18 +114,18 @@ scope="main"
 
 # 個別スクリプトで TARGET_LIST を設定して使用する
 if [ -z "${TARGET_LIST}" ]; then
-  logOut "ERROR" "TARGET_LIST is not set."
+  logError "TARGET_LIST is not set."
   exitLog "${JOB_ER}"
 fi
 
 if [ ! -f "${TARGET_LIST}" ]; then
-  logOut "ERROR" "Configuration file not found: ${TARGET_LIST}"
+  logError "Configuration file not found: ${TARGET_LIST}"
   exitLog "${JOB_ER}"
 fi
 
 while IFS= read -r line; do
-  logOut "DEBUG" "Line read - [${line}]"
-  logOut "DEBUG" "Loop started turn of [ ${line} ]."
+  logDebug "Line read - [${line}]"
+  logDebug "Loop started turn of [ ${line} ]."
 
   # 個別処理をここへ実装する
   :

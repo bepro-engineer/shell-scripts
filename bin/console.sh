@@ -24,9 +24,6 @@
 . "$(dirname "$0")/../com/utils.shrc"
 . "$(dirname "$0")/../com/logger.shrc"
 
-# 旧バージョンの共通ライブラリ互換ラッパー(現行logger.shrcの logOut/DEFAULT_LOG_MODE に合わせる)
-logError() { logOut "ERROR" "$*"; }
-logDebug() { logOut "DEBUG" "$*"; }
 setLogMode() {
   case "$1" in
     standard|"") DEFAULT_LOG_MODE="CONSOLE" ;;

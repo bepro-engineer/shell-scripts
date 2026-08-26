@@ -95,7 +95,7 @@ parseArgs() {
 validateEnv() {
     # 空/空白のみはNG
     if [ -z "${BASE_URL//[[:space:]]/}" ] || [ -z "${APP_PATH//[[:space:]]/}" ]; then
-        logOut "ERROR" "Missing env. BASE_URL=[$BASE_URL] APP_PATH=[$APP_PATH]"
+        logError "Missing env. BASE_URL=[$BASE_URL] APP_PATH=[$APP_PATH]"
         exitLog 1
     fi
 
@@ -104,7 +104,7 @@ validateEnv() {
         /*)
             ;;
         *)
-            logOut "ERROR" "Invalid APP_PATH format. APP_PATH must start with '/'. APP_PATH=[$APP_PATH]"
+            logError "Invalid APP_PATH format. APP_PATH must start with '/'. APP_PATH=[$APP_PATH]"
             exitLog 1
             ;;
     esac
@@ -134,7 +134,7 @@ checkApp() {
 
     # 通信失敗（DNS失敗/接続不可/タイムアウト等）
     if [ "$curl_rc" -ne 0 ]; then
-        logOut "ERROR" "App check failed (curl). url=[$url] curl_rc=[$curl_rc] http_code=[$http_code]"
+        logError "App check failed (curl). url=[$url] curl_rc=[$curl_rc] http_code=[$http_code]"
         return 2
     fi
 
@@ -144,7 +144,7 @@ checkApp() {
         return 0
     fi
 
-    logOut "ERROR" "App down. url=[$url] http_code=[$http_code]"
+    logError "App down. url=[$url] http_code=[$http_code]"
     return 1
 }
 
@@ -155,13 +155,13 @@ checkApp() {
 scope="pre"
 
 startLog
-trap "logOut \"INFO\" \"SIGTERM received. stop requested.\"; exitLog 0" 15
+trap "writeLog \"INFO\" \"SIGTERM received. stop requested.\"; exitLog 0" 15
 trap "exitLog 1" 1 2 3
 
 parseArgs "$@"
 validateEnv
 
-logOut "INFO" "Monitor daemon started. base=[$BASE_URL] path=[$APP_PATH] interval=[$INTERVAL]"
+logInfo "Monitor daemon started. base=[$BASE_URL] path=[$APP_PATH] interval=[$INTERVAL]"
 
 # ------------------------------------------------------------------
 # main-process（最適化）
@@ -183,22 +183,22 @@ do
             state="UP"
             # 復旧時のみ INFO
             if [ "$prev_state" != "$state" ]; then
-                logOut "INFO" "App recovered. url=[${BASE_URL}${APP_PATH}]"
+                logInfo "App recovered. url=[${BASE_URL}${APP_PATH}]"
             fi
             ;;
         1)
             state="DOWN_HTTP"
             # DOWN は毎回 ERROR（出し続ける）
-            logOut "ERROR" "App down (http). url=[${BASE_URL}${APP_PATH}]"
+            logError "App down (http). url=[${BASE_URL}${APP_PATH}]"
             ;;
         2)
             state="DOWN_COMM"
             # DOWN は毎回 ERROR（出し続ける）
-            logOut "ERROR" "App down (comm). url=[${BASE_URL}${APP_PATH}]"
+            logError "App down (comm). url=[${BASE_URL}${APP_PATH}]"
             ;;
         *)
             state="DOWN_UNKNOWN"
-            logOut "ERROR" "App down (unknown rc). url=[${BASE_URL}${APP_PATH}] rc=[$rc]"
+            logError "App down (unknown rc). url=[${BASE_URL}${APP_PATH}] rc=[$rc]"
             ;;
     esac
 

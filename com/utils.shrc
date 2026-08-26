@@ -35,10 +35,10 @@ releaseLock() {
     
     if [ "$locker" = "$$" ]; then
       rm -f "$LOCK_FILE"
-      logOut "INFO" "Lock released: [$LOCK_FILE]"
+      writeLog "INFO" "Lock released: [$LOCK_FILE]"
     else
-      logOut "WARN" "Lock file exists, but owned by PID [$locker], not [$$]."
-      logOut "WARN" "Lock file [$LOCK_FILE] is left untouched."
+      writeLog "WARN" "Lock file exists, but owned by PID [$locker], not [$$]."
+      writeLog "WARN" "Lock file [$LOCK_FILE] is left untouched."
     fi
   fi
 }
@@ -62,11 +62,11 @@ acquireLock() {
   # flock コマンドを使用してロックを試みる
   if flock -n 200; then
     echo $$ > "$LOCK_FILE"  # プロセスIDを書き込む
-    logOut "INFO" "Lock acquired on [$LOCK_FILE]."
+    writeLog "INFO" "Lock acquired on [$LOCK_FILE]."
     export LOCK_FILE
     return 0
   else
-    logOut "ERROR" "Another instance is already running. Lock file [$LOCK_FILE] exists."
+    writeLog "ERROR" "Another instance is already running. Lock file [$LOCK_FILE] exists."
     return 1
   fi
 }
@@ -132,7 +132,7 @@ setSJIS() {
 setLANG() {
   LANG="${1:-C}"
   export LANG
-  logOut "INFO" "LANG has been set to [$LANG]"
+  writeLog "INFO" "LANG has been set to [$LANG]"
 }
 
 # ------------------------------------------------------------------
@@ -166,11 +166,11 @@ runAs() {
 
   # 実行ユーザーが異なれば sudo で再実行
   if [ "$current_user" != "$target_user" ]; then
-    logOut "INFO" "Switching to user [$target_user] to execute [$script_path]"
+    writeLog "INFO" "Switching to user [$target_user] to execute [$script_path]"
     exec sudo -u "$target_user" -- "$script_path" "$@"
   fi
 
-  logOut "INFO" "Executing as user [$current_user]"
+  writeLog "INFO" "Executing as user [$current_user]"
 }
 
 # ------------------------------------------------------------------
@@ -188,12 +188,12 @@ getFileHash() {
   local file="$1"
 
   if [ -z "$file" ]; then
-    logOut "ERROR" "No file specified for hash calculation."
+    writeLog "ERROR" "No file specified for hash calculation."
     return 1
   fi
 
   if [ ! -f "$file" ]; then
-    logOut "ERROR" "File not found or not accessible: $file"
+    writeLog "ERROR" "File not found or not accessible: $file"
     return 1
   fi
 
@@ -202,7 +202,7 @@ getFileHash() {
   elif command -v shasum > /dev/null 2>&1; then
     shasum -a 256 "$file" | awk '{print $1}'
   else
-    logOut "ERROR" "No suitable SHA-256 command found on this system."
+    writeLog "ERROR" "No suitable SHA-256 command found on this system."
     return 1
   fi
 }
@@ -222,7 +222,7 @@ runAsRoot() {
   local uid
   uid=$(id -u)
   if [ "$uid" -ne 0 ]; then
-    logOut "WARN" "Permission denied. Re-executing as root..."
+    writeLog "WARN" "Permission denied. Re-executing as root..."
     exec sudo "$0" "$@"
   fi
 }
@@ -351,7 +351,7 @@ isPortAlive() {
 
   # Validate input
   if [[ -z "$port" || ! "$port" =~ ^[0-9]+$ ]]; then
-    logOut "ERROR" "Invalid port number: $port"
+    writeLog "ERROR" "Invalid port number: $port"
     return 2
   fi
 
@@ -362,7 +362,7 @@ isPortAlive() {
   elif command -v netstat > /dev/null 2>&1; then
     count=$(netstat -tan 2>/dev/null | grep ":$port" | grep -w "LISTEN" | wc -l)
   else
-    logOut "ERROR" "Neither ss nor netstat is available."
+    writeLog "ERROR" "Neither ss nor netstat is available."
     return 2
   fi
 
@@ -471,7 +471,7 @@ formatDate() {
 backupFile() {
   local file="$1"
   if [ ! -f "$file" ]; then
-    logOut "ERROR" "File not found: $file"
+    writeLog "ERROR" "File not found: $file"
     return 2
   fi
 
@@ -483,9 +483,9 @@ backupFile() {
   
   # バックアップを作成
   if cp "$file" "$backup"; then
-    logOut "INFO" "Backup created: $backup"
+    writeLog "INFO" "Backup created: $backup"
   else
-    logOut "ERROR" "Failed to create backup: $file"
+    writeLog "ERROR" "Failed to create backup: $file"
     return 2
   fi
 }
@@ -506,14 +506,14 @@ deleteOldFiles() {
   local days="$2"
 
   if [ ! -d "$dir" ]; then
-    logOut "ERROR" "Directory not found: $dir"
+    writeLog "ERROR" "Directory not found: $dir"
     return 2
   fi
 
   if find "$dir" -type f -mtime +"$days" -exec rm -f {} \;; then
-    logOut "INFO" "Old files in $dir older than $days days deleted."
+    writeLog "INFO" "Old files in $dir older than $days days deleted."
   else
-    logOut "ERROR" "Failed to delete files in $dir."
+    writeLog "ERROR" "Failed to delete files in $dir."
     return 2
   fi
 }
@@ -534,7 +534,7 @@ isHostAlive() {
   if ping -c 1 -W 1 "$host" >/dev/null 2>&1; then
     return 0
   else
-    logOut "WARN" "Host $host is not reachable."
+    writeLog "WARN" "Host $host is not reachable."
     return 1
   fi
 }
