@@ -24,29 +24,6 @@
 . "$(dirname "$0")/../com/utils.shrc"
 . "$(dirname "$0")/../com/logger.shrc"
 
-# 旧バージョン互換: メニュー表示・確認プロンプト用ヘルパー(現行utils.shrcには無いため直接定義)
-line() { echo -e "${1}"; }
-lineS() { echo -e "-------------------------------------------------"; }
-echoNl() {
-  local indent="$1"; shift
-  printf "%*s%s\n" "$indent" "" "$*"
-}
-question() {
-  local msg="$1" default="$2" type="$3"
-  case "$type" in
-    yesNo)
-      if confirmAction "${msg} [y/N]"; then
-        ans="yes"
-      else
-        ans="no"
-      fi
-      ;;
-    *)
-      read -r -p "${msg} (${default}): " ans
-      [ -z "$ans" ] && ans="$default"
-      ;;
-  esac
-}
 initPlatform() { :; }
 
 # menudata(グループ番号|項目ID|コマンド|ラベル の視覚的テーブル)を読み込み、
