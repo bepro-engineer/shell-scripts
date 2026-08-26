@@ -155,7 +155,7 @@ checkApp() {
 scope="pre"
 
 startLog
-trap "writeLog \"INFO\" \"SIGTERM received. stop requested.\"; exitLog 0" 15
+trap "logInfo \"SIGTERM received. stop requested.\"; exitLog 0" 15
 trap "exitLog 1" 1 2 3
 
 parseArgs "$@"

@@ -358,7 +358,7 @@ startLoop() {
   prepareDirs
 
   if [ -f "${pidfile}" ]; then
-      writeLog "Warn" "already running. try $0 status"
+      logWarn "already running. try $0 status"
       exitLog 1
   fi
 
@@ -405,7 +405,7 @@ stopLoop() {
         kill ${pid}
         logInfo "the process ${pid} was killed. return code : $?"
       else
-        writeLog "Warn" "there is no process to be stopped."
+        logWarn "there is no process to be stopped."
         exitLog 1
       fi
     else
@@ -413,7 +413,7 @@ stopLoop() {
       exitLog 2
     fi
   else
-    writeLog "Warn" "there is no process to be stopped."
+    logWarn "there is no process to be stopped."
     exitLog 1
   fi
   logDebug "$0:stopLoop() ENDED !"

@@ -158,7 +158,7 @@ sysctl -p
 line "8. パッケージのアップデート"
 dnf -y update
 if [ $? -ne 0 ]; then
-	writeLog "dnf update 失敗"
+	logError "dnf update 失敗"
 	rc=$((rc + JOB_ER))
 	exitLog $rc
 fi
@@ -183,7 +183,7 @@ fi
 line "11. chronyd の再起動"
 systemctl restart chronyd
 if ! isProcessAlive "chronyd"; then
-	writeLog "chronyd 起動失敗"
+	logError "chronyd 起動失敗"
 	rc=$((rc + JOB_ER))
 	exitLog $rc
 fi
@@ -200,7 +200,7 @@ systemctl enable chronyd
 # 12. limits.conf 設定
 line "12. プロセス数上限設定"
 edit_limits_conf
-writeLog "limits.conf 編集完了"
+logInfo "limits.conf 編集完了"
 if [ $? -ne 0 ]; then
 	logError  "12. limits.conf 設定に失敗しました"
 	exitLog ${JOB_ER}
@@ -210,9 +210,9 @@ fi
 line "13. ulimit -n を設定"
 if ! grep -q "ulimit -n 65535" "$init_conf"; then
   echo "ulimit -n 65535" >> "$init_conf"
-  writeLog "ulimit 設定追記 [$init_conf]"
+  logInfo "ulimit 設定追記 [$init_conf]"
 else
-  writeLog "ulimit は既に設定済み [$init_conf]"
+  logInfo "ulimit は既に設定済み [$init_conf]"
 fi
 
 # 14. sysctl 設定
