@@ -24,13 +24,6 @@
 . "$(dirname "$0")/../com/utils.shrc"
 . "$(dirname "$0")/../com/logger.shrc"
 
-setLogMode() {
-  case "$1" in
-    standard|"") DEFAULT_LOG_MODE="CONSOLE" ;;
-    *) DEFAULT_LOG_MODE="$1" ;;
-  esac
-}
-
 # 旧バージョン互換: メニュー表示・確認プロンプト用ヘルパー(現行utils.shrcには無いため直接定義)
 line() { echo -e "${1}"; }
 lineS() { echo -e "-------------------------------------------------"; }

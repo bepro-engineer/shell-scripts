@@ -35,6 +35,19 @@ declare -A LOG_LEVEL_PRIORITY=(
 # ------------------------------------------------------------
 DEFAULT_LOG_MODE="CONSOLE"  # ログの出力モード (FILE, CONSOLE9, SYSLOG)
 
+# ------------------------------------------------------------
+# 関数名　　：setLogMode
+# 概要　　　：ログ出力モード(DEFAULT_LOG_MODE)を切り替える
+# 引数　　　：$1 出力モード(standard/空文字ならCONSOLE、それ以外は指定値をそのまま設定)
+# 戻り値　　：なし
+# ------------------------------------------------------------
+setLogMode() {
+  case "$1" in
+    standard|"") DEFAULT_LOG_MODE="CONSOLE" ;;
+    *) DEFAULT_LOG_MODE="$1" ;;
+  esac
+}
+
 BASE_PATH=${BASE_PATH:-"$(cd "$(dirname "$0")/.." && pwd)"}
 # shellcheck disable=SC2034
 BIN_PATH=${BASE_PATH}/bin
