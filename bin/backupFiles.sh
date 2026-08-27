@@ -238,7 +238,7 @@ trap "terminate" HUP INT QUIT TERM
 # ========================================
 while getopts "b:t:" opt; do
     case $opt in
-        b) backup_dir="$OPTARG" ;;
+        b) backup_dir="${OPTARG%/}" ;;
         t) ad_hoc_target="$OPTARG" ;;
         *) usage
         exitLog ${JOB_ER} ;;
