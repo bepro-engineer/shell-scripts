@@ -176,7 +176,7 @@ terminate() {
 # 使用箇所　：main-routine
 # ------------------------------------------------------------------
 executeBackup() {
-    date_stamp="$(getCurrentDate)"
+    date_stamp="$(getCurrentTimestamp)"
     logDebug "date_stamp=${date_stamp}"
     backup_file="${backup_dir}/backup_${date_stamp}.tar.gz"
 
