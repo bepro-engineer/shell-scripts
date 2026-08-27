@@ -8,6 +8,7 @@
 #
 # 引数　　　　：
 #   -b <backup_directory> ：バックアップ保存先ディレクトリ
+#   -t <target_path>       ：バックアップ対象パス(省略時はtarget.cfgの内容を使用する)
 #
 # 戻り値　　　：0（正常終了）、2（異常終了）
 # 使用箇所　　：定期バックアップ処理
@@ -41,6 +42,7 @@ target_list="${ETC_PATH}/target.cfg"
 ignore_list="${ETC_PATH}/ignore.cfg"
 backup_dir=""
 backup_file=""
+ad_hoc_target=""
 rc=${JOB_ER}
 
 # 警告メッセージ定義
@@ -55,6 +57,7 @@ err_msg05="除外リストが存在しません。"
 err_msg06="tar アーカイブ作成に失敗しました。"
 err_msg07="古いバックアップの削除に失敗しました。"
 err_msg08="異常終了のため、バックアップを削除します。"
+err_msg09="バックアップ対象パスが存在しません。"
 
 # ========================================
 # 関数定義
@@ -75,14 +78,16 @@ scope="func"
 usage() {
     cat >&2 <<'EOF'
 --------------------------------------
-  Usage: 
-    bash backupFiles.sh -b <backup_directory>
+  Usage:
+    bash backupFiles.sh -b <backup_directory> [-t <target_path>]
 
   Options:
     -b backup_directory : バックアップ保存先ディレクトリ
+    -t target_path       : バックアップ対象パス(省略時はtarget.cfgの内容を使用する)
 
   Example:
     bash backupFiles.sh -b /path/to/backup
+    bash backupFiles.sh -b /path/to/backup -t /path/to/target
 --------------------------------------
 EOF
 }
@@ -104,6 +109,31 @@ checkArg() {
         usage
         exitLog ${JOB_ER}
     fi
+
+    # 対象の検証は保存先ディレクトリの作成より先に行う(検証失敗時に
+    # 作りっぱなしのディレクトリを残さないため)。
+    if [ -n "$ad_hoc_target" ]; then
+        if [ ! -e "$ad_hoc_target" ]; then
+            logError "${err_msg09} (${ad_hoc_target})"
+            exitLog ${JOB_ER}
+        fi
+    else
+        if [ ! -f "$target_list" ]; then
+            logError "${err_msg04} (${target_list})"
+            exitLog ${JOB_ER}
+        fi
+        # 【追加】ターゲットリスト内のファイルが存在するか確認
+        while read line; do
+            if [ ! -e "$line" ]; then
+                logError "${err_msg04}: ${line}"
+                exitLog ${JOB_ER}
+            fi
+        done < "$target_list"
+    fi
+    if [ ! -f "$ignore_list" ]; then
+        logWarn "${err_msg05} (${ignore_list})"
+    fi
+
     if [ ! -d "$backup_dir" ]; then
         logWarn "${err_msg02} (${backup_dir})"
         mkdir -p "$backup_dir"
@@ -112,21 +142,6 @@ checkArg() {
         logError "${err_msg03} (${backup_dir})"
         exitLog ${JOB_ER}
     fi
-    if [ ! -f "$target_list" ]; then
-        logError "${err_msg04} (${target_list})"
-        exitLog ${JOB_ER}
-    fi
-    if [ ! -f "$ignore_list" ]; then
-        logWarn "${err_msg05} (${ignore_list})"
-    fi
-
-    # 【追加】ターゲットリスト内のファイルが存在するか確認
-    while read line; do
-        if [ ! -e "$line" ]; then
-            logError "${err_msg04}: ${line}"
-            exitLog ${JOB_ER}
-        fi
-    done < "$target_list"
 }
 
 # ------------------------------------------------------------------
@@ -167,12 +182,24 @@ executeBackup() {
 
     logInfo "バックアップ開始: ${backup_file}"
 
+    # 除外リストが存在する場合のみ --exclude-from を付与する
+    # (存在しない場合はcheckArgでWARNのみで続行する設計のため、tar側でも必須にしない)
+    exclude_opts=()
+    if [ -f "$ignore_list" ]; then
+        exclude_opts=(--exclude-from="${ignore_list}")
+    fi
+
     # tar でアーカイブを作成
-    logDebug "tarアーカイブ対象のリスト:"
-    cat "${target_list}" | while read line; do
-        logDebug "  - ${line}"
-    done
-    /bin/tar --exclude-from="${ignore_list}" -czf "${backup_file}" -T "${target_list}"
+    if [ -n "$ad_hoc_target" ]; then
+        logDebug "tarアーカイブ対象: ${ad_hoc_target}"
+        /bin/tar "${exclude_opts[@]}" -czf "${backup_file}" "${ad_hoc_target}"
+    else
+        logDebug "tarアーカイブ対象のリスト:"
+        cat "${target_list}" | while read line; do
+            logDebug "  - ${line}"
+        done
+        /bin/tar "${exclude_opts[@]}" -czf "${backup_file}" -T "${target_list}"
+    fi
 
      rc=$?
     if [ $rc -ne $JOB_OK ]; then
@@ -209,9 +236,10 @@ trap "terminate" HUP INT QUIT TERM
 # ========================================
 # 引数の処理
 # ========================================
-while getopts "b:" opt; do
+while getopts "b:t:" opt; do
     case $opt in
         b) backup_dir="$OPTARG" ;;
+        t) ad_hoc_target="$OPTARG" ;;
         *) usage
         exitLog ${JOB_ER} ;;
     esac
