@@ -118,7 +118,7 @@ runAs root "$@"
 SCRIPT_HOME="${BASE_PATH}/bin"
 CHK_MSG_SVC="サービス名を入力してください。（例: httpd, tomcat, sshd）"
 CHK_MSG_CTX="Tomcatのコンテキストパスを入力してください。（例: /myapp）"
-CHK_MSG_TARGET="バックアップ対象ディレクトリを入力してください。"
+CHK_MSG_TARGET="バックアップ対象ディレクトリを入力してください(空欄で規定のリストを使用)。"
 CHK_MSG_DIR="バックアップ保存先ディレクトリを入力してください。"
 CHK_MSG_YN="よろしいですか？"
 
@@ -332,18 +332,20 @@ backup_files() {
   logDebug "Method $cmd() Started!"
   question "`getCaption $cmd`します。${CHK_MSG_TARGET}" "" "alpha"
   local target="${ans}"
-  if [ -z "${target}" ]; then
-    echoNl 2 "バックアップ対象が入力されませんでした。`getCaption ${cmd}`を中止します。"
-    logDebug "Method $cmd() Ended!"
-    return
-  fi
+  local target_desc="規定のリスト(target.cfg)"
+  [ -n "${target}" ] && target_desc="${target}"
   question "`getCaption $cmd`します。${CHK_MSG_DIR}" "" "alpha"
   local dir="${ans}"
   if [ -n "${dir}" ]; then
-    question "[ ${target} -> ${dir} ] `getCaption $cmd`します。${CHK_MSG_YN}" "yes" "yesNo"
+    question "[ ${target_desc} -> ${dir} ] `getCaption $cmd`します。${CHK_MSG_YN}" "yes" "yesNo"
     if [ "${ans}" == "yes" ]; then
-      logDebug "${SCRIPT_HOME}/backupFiles.sh -b ${dir} -t ${target}"
-      ${SCRIPT_HOME}/backupFiles.sh -b "${dir}" -t "${target}"
+      if [ -n "${target}" ]; then
+        logDebug "${SCRIPT_HOME}/backupFiles.sh -b ${dir} -t ${target}"
+        ${SCRIPT_HOME}/backupFiles.sh -b "${dir}" -t "${target}"
+      else
+        logDebug "${SCRIPT_HOME}/backupFiles.sh -b ${dir}"
+        ${SCRIPT_HOME}/backupFiles.sh -b "${dir}"
+      fi
     else
       echoNl 2 "[ No ]が選択されました。`getCaption ${cmd}`を中止します。"
     fi
