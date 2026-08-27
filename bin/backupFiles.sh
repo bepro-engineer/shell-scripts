@@ -207,6 +207,15 @@ executeBackup() {
         terminate
     fi
 
+    # runAsでroot昇格する前の実行ユーザー(SUDO_USER)へ所有者を戻す。
+    # 昇格していない場合(SUDO_USER未設定)は現在の実行ユーザーのままとする。
+    local owner="${SUDO_USER:-$(id -un)}"
+    local owner_group
+    owner_group="$(id -gn "${owner}" 2>/dev/null)"
+    if [ -n "${owner_group}" ]; then
+        chown "${owner}:${owner_group}" "${backup_file}"
+    fi
+
     logInfo "バックアップ完了: ${backup_file}"
 }
 
