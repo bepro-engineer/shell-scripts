@@ -38,8 +38,8 @@ readonly JOB_OK=0
 readonly JOB_WR=1
 readonly JOB_ER=2
 
-target_list="${ETC_PATH}/target.cfg"
-ignore_list="${ETC_PATH}/ignore.cfg"
+target_list="${ETC_PATH}/$(hostname -s)/target.cfg"
+ignore_list="${ETC_PATH}/$(hostname -s)/ignore.cfg"
 backup_dir=""
 backup_file=""
 ad_hoc_target=""
